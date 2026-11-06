@@ -604,6 +604,7 @@ button.avatar { border: 0; padding: 0; cursor: pointer; }
     o.joinedDays = daysAgo(r.joined); o.lastDays = daysAgo(r.last_login);
     o.status = !r.active ? 'suspended' : (!r.store_id || (o.joinedDays !== null && o.joinedDays <= 14)) ? 'new' : 'active';
     o.planName = r.plan_code ? (planNames[r.plan_code] || r.plan_code) : null;
+    o.pendingName = (!r.store_id && r.pending_plan) ? (planNames[r.pending_plan] || r.pending_plan) : null;
     return o;
   }
   function initials(n) { var p = String(n || '?').trim().split(/\s+/); return ((p[0] || '')[0] + ((p[1] || '')[0] || '')).toUpperCase(); }
@@ -698,7 +699,7 @@ button.avatar { border: 0; padding: 0; cursor: pointer; }
     $('#users').innerHTML = list.map(function (o) {
       return '<li><button type="button" class="row" data-id="' + esc(o.owner_id) + '" aria-label="Buka detail ' + esc(o.owner_name) + '">' +
         '<span class="who">' + avatar(o) + '<span class="txt"><div class="nm">' + esc(o.owner_name || 'Tanpa nama') + '</div><div class="em">' + esc(o.email || '-') + '</div></span></span>' +
-        '<span class="c-role"><b>' + (o.store_name ? esc(o.store_name) : 'Belum ada toko') + '</b><small>' + (o.planName ? 'Paket ' + esc(o.planName) : 'Belum ada paket') + '</small></span>' +
+        '<span class="c-role"><b>' + (o.store_name ? esc(o.store_name) : 'Belum ada toko') + '</b><small>' + (o.planName ? 'Paket ' + esc(o.planName) : (o.pendingName ? 'Paket ' + esc(o.pendingName) + ' (menunggu toko)' : 'Belum ada paket')) + '</small></span>' +
         '<span class="c-stat">' + pill(o.status) + '</span>' +
         '<span class="c-last">' + rel(o.joinedDays) + '</span>' +
         '<span class="chev">' + ICON.chev + '</span></button></li>';
@@ -760,7 +761,7 @@ button.avatar { border: 0; padding: 0; cursor: pointer; }
   /* Detail owner */
   function detailHTML(o, mode) {
     var isSelf = (o.email || '').toLowerCase() === adminEmail;
-    var sub = o.sub_status ? ((SUBST[o.sub_status] || o.sub_status) + (o.current_period_end ? ', sampai ' + dateTxt(o.current_period_end) : '')) : '-';
+    var sub = (!o.sub_status && o.pendingName) ? o.pendingName + ' (menunggu toko dibuat)' : o.sub_status ? ((SUBST[o.sub_status] || o.sub_status) + (o.current_period_end ? ', sampai ' + dateTxt(o.current_period_end) : '')) : '-';
     var statusBtn = o.active
       ? '<button type="button" class="btn danger" data-act="suspend"' + (isSelf ? ' disabled' : '') + '>Tangguhkan owner</button>'
       : '<button type="button" class="btn primary" data-act="activate">Aktifkan kembali</button>';
@@ -777,7 +778,7 @@ button.avatar { border: 0; padding: 0; cursor: pointer; }
     } else box = statusBtn + delBtn;
     var planSel = o.store_id
       ? '<label class="lbl-f" for="planSel">Paket langganan<select class="select" id="planSel">' + (o.plan_code ? '' : '<option value="" selected disabled>Pilih paket</option>') + plans.map(function (p2) { return '<option value="' + esc(p2.code) + '"' + (p2.code === o.plan_code ? ' selected' : '') + '>' + esc(p2.name) + '</option>'; }).join('') + '</select></label>'
-      : '<p class="hint-line">Owner ini belum membuat toko, jadi paket dan tagihan belum bisa diatur.</p>';
+      : '<p class="hint-line">Owner ini belum membuat toko, jadi paket dan tagihan belum bisa diatur.' + (o.pendingName ? ' Paket <b>' + esc(o.pendingName) + '</b> yang kamu pilih berlaku otomatis saat toko pertama dibuat.' : '') + '</p>';
     var tabs = o.store_id
       ? '<div class="tabs" role="tablist"><button type="button" role="tab" data-tab2="bill" aria-selected="' + (detailTab === 'bill') + '">Tagihan</button><button type="button" role="tab" data-tab2="log" aria-selected="' + (detailTab === 'log') + '">Aktivitas</button></div><div id="tabBody">' + tabHTML() + '</div>'
       : '';
@@ -1014,7 +1015,7 @@ button.avatar { border: 0; padding: 0; cursor: pointer; }
       var stateText = o.sub_status ? (SUBST[o.sub_status] || o.sub_status) : (o.store_id ? 'Belum ada langganan' : 'Menunggu toko dibuat');
       var detail = isTrial ? 'Sampai ' + dateTxt(o.trial_ends_at) : (o.store_name || o.email || 'Belum ada toko');
       var badgeClass = o.sub_status === 'trialing' ? 'trial' : (o.sub_status === 'expired' || o.sub_status === 'past_due' ? 'ended' : 'normal');
-      return '<li><button type="button" class="subscription-item row" data-id="' + esc(o.owner_id) + '" aria-label="Buka langganan ' + esc(o.owner_name || 'owner') + '"><span class="subscription-person">' + avatar(o) + '<span class="subscription-person-txt"><b>' + esc(o.owner_name || 'Tanpa nama') + '</b><span>' + esc(o.store_name || o.email || 'Belum ada toko') + '</span></span></span><span class="subscription-plan"><b>' + esc(o.planName || (o.store_id ? 'Belum ada paket' : 'Belum berlangganan')) + '</b><span class="sub-state ' + badgeClass + '">' + esc(stateText) + '</span></span><span class="subscription-date">' + esc(detail) + '</span><span class="chev">' + ICON.chev + '</span></button></li>';
+      return '<li><button type="button" class="subscription-item row" data-id="' + esc(o.owner_id) + '" aria-label="Buka langganan ' + esc(o.owner_name || 'owner') + '"><span class="subscription-person">' + avatar(o) + '<span class="subscription-person-txt"><b>' + esc(o.owner_name || 'Tanpa nama') + '</b><span>' + esc(o.store_name || o.email || 'Belum ada toko') + '</span></span></span><span class="subscription-plan"><b>' + esc(o.planName || o.pendingName || (o.store_id ? 'Belum ada paket' : 'Belum berlangganan')) + '</b><span class="sub-state ' + badgeClass + '">' + esc(stateText) + '</span></span><span class="subscription-date">' + esc(detail) + '</span><span class="chev">' + ICON.chev + '</span></button></li>';
     }).join('');
     var trialCount = count(function(o){ return o.sub_status === 'trialing'; });
     var activeCount = count(function(o){ return o.sub_status === 'active'; });
