@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Kelola User Ordela</title>
+<title>Owner Ordela</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Red+Hat+Display:wght@400;500;600;700;800&display=swap">
@@ -262,6 +262,24 @@ ul.users { list-style: none; margin: 0; padding: 0; display: flex; flex-directio
 body { margin: 0; }
 .gate { max-width: 420px; margin: 10vh auto 0; }
 .gate .card { gap: 16px; }
+
+.pill.new { --c: var(--info); }
+.chip { padding-inline: 2px; }
+.chip span { font-size: 11.5px; }
+.c-role { min-width: 0; font-size: 13px; }
+.c-role b { display: block; font-weight: 700; color: var(--fg); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.c-role small { color: var(--muted); font-weight: 500; font-size: 12.5px; }
+.row { grid-template-columns: minmax(0, 1fr) auto auto; grid-template-areas: "who who chev" "role stat stat" "last last last"; }
+@media (min-width: 760px) {
+  .cols, .row { grid-template-columns: minmax(0, 2.2fr) minmax(0, 1.4fr) 130px 130px 20px; grid-template-areas: "who role stat last chev"; }
+}
+.tabs { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; background: var(--surface-2); border-radius: 99px; padding: 4px; }
+.tabs button { border: 0; background: transparent; color: var(--muted); font-weight: 600; height: 38px; border-radius: 99px; }
+.tabs button[aria-selected="true"] { background: var(--accent); color: var(--on-accent); }
+.log { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; max-height: 220px; overflow: auto; }
+.log li { background: var(--surface-2); border-radius: 14px; padding: 10px 12px; display: flex; justify-content: space-between; gap: 12px; font-size: 13.5px; }
+.log .l { min-width: 0; overflow-wrap: anywhere; }
+.log .r { color: var(--muted); white-space: nowrap; font-size: 12.5px; text-align: right; }
 </style>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
 </head>
@@ -270,9 +288,9 @@ body { margin: 0; }
 <main class="gate" id="gate" hidden>
   <section class="card">
     <h1 style="margin:0;font-size:26px;font-weight:800">Masuk ke Ordela Admin</h1>
-    <p class="sub" id="gateSub" style="margin:0">Kami kirim tautan masuk ke email Owner atau Admin.</p>
+    <p class="sub" id="gateSub" style="margin:0">Kami kirim tautan masuk ke email admin Ordela.</p>
     <form id="loginForm" style="display:flex;flex-direction:column;gap:14px">
-      <label class="lbl-f" for="loginEmail">Email<input class="input" id="loginEmail" type="email" required autocomplete="email" placeholder="nama@ordela.id"></label>
+      <label class="lbl-f" for="loginEmail">Email<input class="input" id="loginEmail" type="email" required autocomplete="email" placeholder="nama@email.com"></label>
       <p class="hint-line" id="loginMsg" role="status"></p>
       <button type="submit" class="btn primary">Kirim tautan masuk</button>
     </form>
@@ -284,56 +302,52 @@ body { margin: 0; }
   <header class="top">
     <div class="avatar" id="meAv" style="--c: var(--accent)" aria-hidden="true">OA</div>
     <div class="who-me">
-      <div class="hello" id="hello">Selamat datang kembali</div>
-      <h1 id="pageTitle">Kelola user</h1>
+      <div class="hello">Admin Ordela</div>
+      <h1 id="pageTitle">Owner</h1>
     </div>
-    <button class="icon-btn" id="bell" type="button" aria-label="Notifikasi">
+    <button class="icon-btn" id="bell" type="button" aria-label="Owner baru">
       <svg class="i" viewBox="0 0 24 24"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 8 3 8H3s3-1 3-8"/><path d="M10.3 20a2 2 0 0 0 3.4 0"/></svg>
-      <span class="dot"></span>
+      <span class="dot" id="bellDot" hidden></span>
     </button>
   </header>
 
   <div class="view" id="view-home">
-  <section class="hero" aria-live="polite">
-    <div>
-      <h2>User aktif</h2>
-      <p id="heroSub" class="num"></p>
-    </div>
-    <div class="big num" id="heroRing"></div>
-  </section>
-
-  <section aria-labelledby="statusLabel">
-    <h2 class="sect-label" id="statusLabel">Tampilkan user dengan status</h2>
-    <div class="tiles-status" id="statusTiles"></div>
-  </section>
-
-  <section class="stats" id="stats" aria-label="Ringkasan"></section>
-
-  <section aria-labelledby="listTitle">
-    <div class="list-head">
-      <h2 id="listTitle">Semua user</h2>
-      <span class="num" id="count"></span>
-    </div>
-    <div class="toolbar">
-      <div class="field search">
-        <svg class="i" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
-        <input class="input" id="q" type="search" placeholder="Cari nama, email, atau outlet" autocomplete="off" aria-label="Cari user">
+    <section class="hero" aria-live="polite">
+      <div>
+        <h2>Owner baru</h2>
+        <p id="heroSub" class="num"></p>
       </div>
-      <select class="select" id="roleFilter" aria-label="Filter peran">
-        <option value="all">Semua peran</option>
-        <option>Owner</option><option>Admin</option><option>Manajer</option><option>Staf</option>
-      </select>
-      <select class="select" id="sort" aria-label="Urutkan">
-        <option value="recent">Terbaru bergabung</option>
-        <option value="name">Nama A–Z</option>
-        <option value="active">Terakhir aktif</option>
-      </select>
-    </div>
-    <div style="height:12px"></div>
-    <div class="cols" aria-hidden="true"><span>User</span><span>Peran</span><span>Status</span><span>Terakhir aktif</span><span></span></div>
-    <ul class="users" id="users"></ul>
-  </section>
+      <div class="big num" id="heroRing"></div>
+    </section>
 
+    <section aria-labelledby="statusLabel">
+      <h2 class="sect-label" id="statusLabel">Tampilkan owner dengan status</h2>
+      <div class="tiles-status" id="statusTiles"></div>
+    </section>
+
+    <section class="stats" id="stats" aria-label="Ringkasan"></section>
+
+    <section aria-labelledby="listTitle">
+      <div class="list-head">
+        <h2 id="listTitle">Semua owner</h2>
+        <span class="num" id="count"></span>
+      </div>
+      <div class="toolbar">
+        <div class="field search">
+          <svg class="i" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+          <input class="input" id="q" type="search" placeholder="Cari nama, email, atau toko" autocomplete="off" aria-label="Cari owner">
+        </div>
+        <select class="select" id="planFilter" aria-label="Filter paket"><option value="all">Semua paket</option></select>
+        <select class="select" id="sort" aria-label="Urutkan">
+          <option value="recent">Terbaru daftar</option>
+          <option value="name">Nama A–Z</option>
+          <option value="active">Terakhir masuk</option>
+        </select>
+      </div>
+      <div style="height:12px"></div>
+      <div class="cols" aria-hidden="true"><span>Owner</span><span>Toko dan paket</span><span>Status</span><span>Terdaftar</span><span></span></div>
+      <ul class="users" id="users"></ul>
+    </section>
   </div>
 
   <div class="view" id="view-analytics" hidden></div>
@@ -341,11 +355,10 @@ body { margin: 0; }
 </div>
 
 <div class="dock" id="dock" hidden>
-  <button class="fab" id="addBtn" type="button"><span>Tambah user</span><span class="plus"><svg class="i" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></span></button>
   <nav class="nav" aria-label="Navigasi utama">
     <button type="button" data-tab="home" aria-current="page"><svg class="i" viewBox="0 0 24 24"><path d="M4 11 12 4l8 7v8a1 1 0 0 1-1 1h-4v-6H9v6H5a1 1 0 0 1-1-1z"/></svg><span>Beranda</span></button>
-    <button type="button" data-tab="analytics"><svg class="i" viewBox="0 0 24 24"><path d="M12 3a9 9 0 1 0 9 9h-9z"/><path d="M15 3.500A9 9 0 0 1 20.500 9H15z"/></svg><span>Analitik</span></button>
-    <button type="button" data-tab="profile"><svg class="i" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21c.8-4 4-6 8-6s7.200 2 8 6"/></svg><span>Profil</span></button>
+    <button type="button" data-tab="analytics"><svg class="i" viewBox="0 0 24 24"><path d="M12 3a9 9 0 1 0 9 9h-9z"/><path d="M15 3.5A9 9 0 0 1 20.5 9H15z"/></svg><span>Analitik</span></button>
+    <button type="button" data-tab="profile"><svg class="i" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21c.8-4 4-6 8-6s7.2 2 8 6"/></svg><span>Profil</span></button>
   </nav>
 </div>
 
@@ -357,93 +370,104 @@ body { margin: 0; }
 <script>
 (function () {
   var $ = function (s) { return document.querySelector(s); };
-  var esc = function (s) { return String(s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); };
+  var esc = function (s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); };
   var ICON = {
-    users: '<svg class="i" viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c.6-3.6 3.2-5.5 6.5-5.5s5.9 1.9 6.5 5.5"/><path d="M16 4.6a3.5 3.5 0 0 1 0 6.8M18.5 14.8c1.6.8 2.7 2.4 3 5.2"/></svg>',
-    mail: '<svg class="i" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="3"/><path d="m4 8 8 5.5L20 8"/></svg>',
-    shield: '<svg class="i" viewBox="0 0 24 24"><path d="M12 3 5 6v5c0 4.5 3 8 7 10 4-2 7-5.500 7-10V6z"/><path d="m9 12 2 2 4-4"/></svg>',
-    key: '<svg class="i" viewBox="0 0 24 24"><circle cx="8" cy="15" r="4"/><path d="m11 12 8-8M16 7l3 3"/></svg>',
     chev: '<svg class="i" viewBox="0 0 24 24"><path d="m9 6 6 6-6 6"/></svg>',
-    userplus: '<svg class="i" viewBox="0 0 24 24"><circle cx="10" cy="8" r="3.5"/><path d="M3 20c.6-3.600 3.200-5.500 7-5.500M18 14v6M15 17h6"/></svg>'
+    users: '<svg class="i" viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c.6-3.6 3.2-5.5 6.5-5.5s5.9 1.9 6.5 5.5"/><path d="M16 4.6a3.5 3.5 0 0 1 0 6.8M18.5 14.8c1.6.8 2.7 2.4 3 5.2"/></svg>',
+    store: '<svg class="i" viewBox="0 0 24 24"><path d="M4 9 5.5 4h13L20 9"/><path d="M4 9a2.7 2.7 0 0 0 5.3 0 2.7 2.7 0 0 0 5.4 0A2.7 2.7 0 0 0 20 9"/><path d="M5 12v8h14v-8"/></svg>',
+    spark: '<svg class="i" viewBox="0 0 24 24"><path d="M12 3v4M12 17v4M3 12h4M17 12h4M6 6l2.5 2.5M15.5 15.5 18 18M18 6l-2.5 2.5M8.5 15.5 6 18"/></svg>',
+    card: '<svg class="i" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="3"/><path d="M3 10h18"/></svg>'
   };
-  var ROLE_NOTE = { Owner: 'Akses penuh dan penagihan', Admin: 'Kelola user dan pengaturan', Manajer: 'Kelola outlet dan pesanan', Staf: 'Pesanan dan menu' };
-  var STATUS = { active: 'Aktif', pending: 'Menunggu', suspended: 'Ditangguhkan' };
+  var STATUS = { new: 'Baru', active: 'Aktif', suspended: 'Ditangguhkan' };
+  var PAID = ['pro', 'business', 'enterprise'];
   var TONES = ['--info', '--violet', '--ok', '--warn', '--crit'];
+  var SUBST = { active: 'Aktif', trialing: 'Uji coba', past_due: 'Menunggak', cancelled: 'Dibatalkan', expired: 'Kedaluwarsa', grandfathered: 'Legacy (dilindungi)', suspended: 'Ditangguhkan' };
+  var ACTION_LABEL = { plan_changed: 'Paket diubah', owner_suspended: 'Owner ditangguhkan', owner_activated: 'Owner diaktifkan' };
 
-  var users = [];
   var SB_URL = 'https://txnpqiiwdtgtfgkrquty.supabase.co';
   var SB_KEY = 'sb_publishable_e1IZBxl3Menz3-N4ehFXkA_rxNLM7t8';
   var sb = window.supabase.createClient(SB_URL, SB_KEY);
-  var meEmail = '';
-  function daysAgo(ts) { if (!ts) return null; return Math.max(0, Math.floor((Date.now() - new Date(ts).getTime()) / 86400000)); }
-  function fromRow(r) {
-    return { id: r.id, name: r.name, email: r.email, role: r.role, status: r.status, outlet: r.outlet,
-      last: daysAgo(r.last_active_at), joined: daysAgo(r.created_at) || 0, twofa: r.two_factor, me: r.email === meEmail };
-  }
-  async function load() {
-    var r = await sb.from('ordela_users').select('*').order('created_at', { ascending: false });
-    if (r.error) { toast('Gagal memuat user: ' + r.error.message); return false; }
-    users = r.data.map(fromRow); renderAll(); return true;
-  }
-  async function save(u, patch, msg) {
-    var r = await sb.from('ordela_users').update(patch).eq('id', u.id);
-    if (r.error) { toast('Gagal menyimpan: ' + r.error.message); return; }
-    await load(); if (openId) refreshDetail(); toast(msg);
-  }
-  async function sendLink(email) {
-    var r = await sb.auth.signInWithOtp({ email: email, options: { emailRedirectTo: location.origin + location.pathname } });
-    return r.error;
-  }
-  var state = { status: 'all', q: '', role: 'all', sort: 'recent' };
-  var lastFocus = null;
-  var toastTimer;
 
-  function initials(n) { var p = n.trim().split(/\s+/); return ((p[0] || '')[0] + ((p[1] || '')[0] || '')).toUpperCase(); }
-  function tone(n) { var h = 0; for (var i = 0; i < n.length; i++) h = (h * 31 + n.charCodeAt(i)) >>> 0; return TONES[h % TONES.length]; }
-  function avatar(u, lg) { return '<span class="avatar' + (lg ? ' lg' : '') + '" style="--c:var(' + tone(u.name) + ')" aria-hidden="true">' + esc(initials(u.name)) + '</span>'; }
-  function lastText(u) {
-    if (u.status === 'pending') return 'Undangan terkirim';
-    if (u.last === 0) return 'Hari ini';
-    if (u.last === 1) return 'Kemarin';
-    return u.last + ' hari lalu';
+  var owners = [], plans = [], planNames = {};
+  var adminEmail = '';
+  var state = { status: 'all', q: '', plan: 'all', sort: 'recent' };
+  var openId = null, detailData = null, detailTab = 'bill', busy = false, lastFocus = null, toastTimer;
+
+  async function api(action, extra) {
+    var r = await sb.functions.invoke('owner-admin', { body: Object.assign({ action: action }, extra || {}) });
+    if (r.error) {
+      var msg = r.error.message, status = r.error.context && r.error.context.status;
+      try { var j = await r.error.context.json(); if (j && j.error) msg = j.error; } catch (e) { /* abaikan */ }
+      var err = new Error(msg); err.status = status; throw err;
+    }
+    return r.data;
   }
-  function joinText(u) {
-    if (u.joined === 0) return 'Hari ini';
-    if (u.joined < 30) return u.joined + ' hari lalu';
-    var m = Math.round(u.joined / 30);
-    return m < 12 ? m + ' bulan lalu' : (Math.round(m / 12 * 10) / 10).toString().replace('.', ',') + ' tahun lalu';
+
+  function daysAgo(ts) { if (!ts) return null; return Math.max(0, Math.floor((Date.now() - new Date(ts).getTime()) / 86400000)); }
+  function norm(r) {
+    var o = Object.assign({}, r);
+    o.joinedDays = daysAgo(r.joined); o.lastDays = daysAgo(r.last_login);
+    o.status = !r.active ? 'suspended' : (!r.store_id || (o.joinedDays !== null && o.joinedDays <= 14)) ? 'new' : 'active';
+    o.planName = r.plan_code ? (planNames[r.plan_code] || r.plan_code) : null;
+    return o;
+  }
+  function initials(n) { var p = String(n || '?').trim().split(/\s+/); return ((p[0] || '')[0] + ((p[1] || '')[0] || '')).toUpperCase(); }
+  function tone(n) { var h = 0; n = String(n || ''); for (var i = 0; i < n.length; i++) h = (h * 31 + n.charCodeAt(i)) >>> 0; return TONES[h % TONES.length]; }
+  function avatar(o, lg) { return '<span class="avatar' + (lg ? ' lg' : '') + '" style="--c:var(' + tone(o.owner_name) + ')" aria-hidden="true">' + esc(initials(o.owner_name)) + '</span>'; }
+  function rel(d, zero) { if (d === null) return '-'; if (d === 0) return zero || 'Hari ini'; if (d === 1) return 'Kemarin'; if (d < 30) return d + ' hari lalu'; var m = Math.round(d / 30); return m < 12 ? m + ' bulan lalu' : (Math.round(m / 12 * 10) / 10).toString().replace('.', ',') + ' tahun lalu'; }
+  function dateTxt(ts) { return ts ? new Date(ts).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' }) : '-'; }
+  function money(minor, cur) {
+    var n = Number(minor) / 100;
+    try { return new Intl.NumberFormat('id-ID', { style: 'currency', currency: (cur || 'USD').trim(), maximumFractionDigits: 2 }).format(n); } catch (e) { return n + ' ' + cur; }
   }
   function pill(s) { return '<span class="pill ' + s + '">' + STATUS[s] + '</span>'; }
+  function count(fn) { return owners.filter(fn).length; }
   function ring(p, color, icon) {
     var c = 2 * Math.PI * 18;
     return '<span class="ring" style="--c:var(' + color + ')"><svg class="r" viewBox="0 0 44 44" aria-hidden="true"><circle class="rt" cx="22" cy="22" r="18"/><circle class="rv" cx="22" cy="22" r="18" transform="rotate(-90 22 22)" stroke-dasharray="' + (c * Math.max(p, 4) / 100).toFixed(1) + ' ' + c.toFixed(1) + '"/></svg>' + icon + '</span>';
   }
-  function count(fn) { return users.filter(fn).length; }
+  function bigRing(p) {
+    var c = 2 * Math.PI * 40;
+    return '<svg viewBox="0 0 92 92" aria-hidden="true"><circle class="t" cx="46" cy="46" r="40"/><circle class="v" cx="46" cy="46" r="40" transform="rotate(-90 46 46)" stroke-dasharray="' + (c * p / 100).toFixed(1) + ' ' + c.toFixed(1) + '"/></svg><span>' + p + '%</span>';
+  }
+  function toast(msg) { var t = $('#toast'); t.textContent = msg; t.classList.add('show'); clearTimeout(toastTimer); toastTimer = setTimeout(function () { t.classList.remove('show'); }, 3000); }
+
+  async function load() {
+    var d = await api('list');
+    plans = d.plans || []; planNames = {};
+    plans.forEach(function (p) { planNames[p.code] = p.name; });
+    owners = d.owners.map(norm);
+    var sel = $('#planFilter'), keep = sel.value;
+    sel.innerHTML = '<option value="all">Semua paket</option>' + plans.map(function (p) { return '<option value="' + esc(p.code) + '">' + esc(p.name) + '</option>'; }).join('') + '<option value="none">Belum ada paket</option>';
+    sel.value = Array.prototype.some.call(sel.options, function (o) { return o.value === keep; }) ? keep : 'all';
+    renderAll();
+  }
 
   function renderHero() {
-    var total = users.length, act = count(function (u) { return u.status === 'active'; });
-    var pct = total ? Math.round(act / total * 100) : 0;
-    var c = 2 * Math.PI * 40;
-    $('#heroSub').textContent = act + '/' + total + ' user bisa masuk hari ini';
-    $('#heroRing').innerHTML = '<svg viewBox="0 0 92 92" aria-hidden="true"><circle class="t" cx="46" cy="46" r="40"/><circle class="v" cx="46" cy="46" r="40" transform="rotate(-90 46 46)" stroke-dasharray="' + (c * pct / 100).toFixed(1) + ' ' + c.toFixed(1) + '"/></svg><span>' + pct + '%</span>';
+    var total = owners.length, fresh = count(function (o) { return o.joinedDays !== null && o.joinedDays <= 30; });
+    var noStore = count(function (o) { return !o.store_id; });
+    var pct = total ? Math.round((total - noStore) / total * 100) : 0;
+    $('#heroSub').textContent = fresh + ' mendaftar 30 hari terakhir, ' + noStore + ' belum punya toko';
+    $('#heroRing').innerHTML = bigRing(pct);
+    $('#heroRing').setAttribute('aria-label', pct + '% owner sudah membuka toko');
+    var n = count(function (o) { return o.status === 'new'; });
+    $('#bellDot').hidden = n === 0;
+    $('#bell').setAttribute('aria-label', n + ' owner baru');
   }
   function renderTiles() {
-    var defs = [['all', 'Semua', users.length], ['active', 'Aktif', count(function (u) { return u.status === 'active'; })], ['pending', 'Menunggu', count(function (u) { return u.status === 'pending'; })], ['suspended', 'Ditangguhkan', count(function (u) { return u.status === 'suspended'; })]];
-    $('#statusTiles').innerHTML = defs.map(function (d) {
-      return '<button type="button" class="chip" data-status="' + d[0] + '" aria-pressed="' + (state.status === d[0]) + '"><b class="num">' + d[2] + '</b><span>' + d[1] + '</span></button>';
-    }).join('');
+    var defs = [['all', 'Semua', owners.length], ['new', 'Baru', count(function (o) { return o.status === 'new'; })], ['active', 'Aktif', count(function (o) { return o.status === 'active'; })], ['suspended', 'Ditangguhkan', count(function (o) { return o.status === 'suspended'; })]];
+    $('#statusTiles').innerHTML = defs.map(function (d) { return '<button type="button" class="chip" data-status="' + d[0] + '" aria-pressed="' + (state.status === d[0]) + '"><b class="num">' + d[2] + '</b><span>' + d[1] + '</span></button>'; }).join('');
   }
   function renderStats() {
-    var total = users.length || 1;
-    var fresh = count(function (u) { return u.joined <= 7; });
-    var pend = count(function (u) { return u.status === 'pending'; });
-    var no2fa = count(function (u) { return !u.twofa; });
-    var priv = count(function (u) { return u.role === 'Owner' || u.role === 'Admin'; });
+    var total = owners.length || 1;
+    var stores = count(function (o) { return !!o.store_id; });
+    var staff = owners.reduce(function (a, o) { return a + (o.staff_count || 0); }, 0);
+    var paid = count(function (o) { return PAID.indexOf(o.plan_code) > -1; });
     var cards = [
-      [fresh, 'Baru minggu ini', 'Bergabung 7 hari terakhir', fresh / total * 100, '--info', ICON.userplus],
-      [pend, 'Undangan menunggu', 'Belum diterima', pend / total * 100, '--warn', ICON.mail],
-      [no2fa, 'Tanpa 2FA', 'Perlu diamankan', no2fa / total * 100, '--crit', ICON.shield],
-      [priv, 'Owner dan Admin', 'Punya akses luas', priv / total * 100, '--violet', ICON.key]
+      [owners.length, 'Total owner', 'Semua yang terdaftar', 100, '--info', ICON.users],
+      [stores, 'Toko dibuat', staff + ' staf di seluruh toko', stores / total * 100, '--ok', ICON.store],
+      [owners.length - stores, 'Belum punya toko', 'Perlu dibantu memulai', (owners.length - stores) / total * 100, '--warn', ICON.spark],
+      [paid, 'Paket berbayar', 'Pro, Business, Enterprise', paid / total * 100, '--violet', ICON.card]
     ];
     $('#stats').innerHTML = cards.map(function (c) {
       return '<div class="stat"><div class="row1"><span class="val num">' + c[0] + '</span>' + ring(c[3], c[4], c[5]) + '</div><div><div class="lbl">' + c[1] + '</div><div class="hint">' + c[2] + '</div></div></div>';
@@ -451,132 +475,128 @@ body { margin: 0; }
   }
   function filtered() {
     var q = state.q.trim().toLowerCase();
-    var list = users.filter(function (u) {
-      if (state.status !== 'all' && u.status !== state.status) return false;
-      if (state.role !== 'all' && u.role !== state.role) return false;
-      if (q && (u.name + ' ' + u.email + ' ' + u.outlet).toLowerCase().indexOf(q) === -1) return false;
+    var list = owners.filter(function (o) {
+      if (state.status !== 'all' && o.status !== state.status) return false;
+      if (state.plan === 'none' ? !!o.plan_code : (state.plan !== 'all' && o.plan_code !== state.plan)) return false;
+      if (q && ((o.owner_name || '') + ' ' + (o.email || '') + ' ' + (o.store_name || '') + ' ' + (o.store_code || '')).toLowerCase().indexOf(q) === -1) return false;
       return true;
     });
     list.sort(function (a, b) {
-      if (state.sort === 'name') return a.name.localeCompare(b.name, 'id');
-      if (state.sort === 'active') return (a.last === null ? 9999 : a.last) - (b.last === null ? 9999 : b.last);
-      return a.joined - b.joined;
+      if (state.sort === 'name') return String(a.owner_name).localeCompare(String(b.owner_name), 'id');
+      if (state.sort === 'active') return (a.lastDays === null ? 9999 : a.lastDays) - (b.lastDays === null ? 9999 : b.lastDays);
+      return (a.joinedDays === null ? 9999 : a.joinedDays) - (b.joinedDays === null ? 9999 : b.joinedDays);
     });
     return list;
   }
   function renderList() {
     var list = filtered();
-    $('#count').textContent = list.length + ' dari ' + users.length + ' user';
-    if (!list.length) {
-      $('#users').innerHTML = '<li class="empty"><b>Tidak ada user yang cocok</b>Ubah kata kunci atau filter untuk melihat user lain.</li>';
-      return;
-    }
-    $('#users').innerHTML = list.map(function (u) {
-      return '<li><button type="button" class="row" data-id="' + u.id + '" aria-label="Buka detail ' + esc(u.name) + '">' +
-        '<span class="who">' + avatar(u) + '<span class="txt"><div class="nm">' + esc(u.name) + (u.me ? '<span class="you">Kamu</span>' : '') + '</div><div class="em">' + esc(u.email) + '</div></span></span>' +
-        '<span class="c-role">' + esc(u.role) + '</span>' +
-        '<span class="c-stat">' + pill(u.status) + '</span>' +
-        '<span class="c-last">' + lastText(u) + '</span>' +
+    $('#count').textContent = list.length + ' dari ' + owners.length + ' owner';
+    if (!list.length) { $('#users').innerHTML = '<li class="empty"><b>Tidak ada owner yang cocok</b>Ubah kata kunci atau filter untuk melihat owner lain.</li>'; return; }
+    $('#users').innerHTML = list.map(function (o) {
+      return '<li><button type="button" class="row" data-id="' + esc(o.owner_id) + '" aria-label="Buka detail ' + esc(o.owner_name) + '">' +
+        '<span class="who">' + avatar(o) + '<span class="txt"><div class="nm">' + esc(o.owner_name || 'Tanpa nama') + '</div><div class="em">' + esc(o.email || '-') + '</div></span></span>' +
+        '<span class="c-role"><b>' + (o.store_name ? esc(o.store_name) : 'Belum ada toko') + '</b><small>' + (o.planName ? 'Paket ' + esc(o.planName) : 'Belum ada paket') + '</small></span>' +
+        '<span class="c-stat">' + pill(o.status) + '</span>' +
+        '<span class="c-last">' + rel(o.joinedDays) + '</span>' +
         '<span class="chev">' + ICON.chev + '</span></button></li>';
     }).join('');
   }
   function renderAll() { renderHero(); renderTiles(); renderStats(); renderList(); }
 
-  function toast(msg) {
-    var t = $('#toast'); t.textContent = msg; t.classList.add('show');
-    clearTimeout(toastTimer); toastTimer = setTimeout(function () { t.classList.remove('show'); }, 2600);
+  /* Detail */
+  function byId(id) { return owners.filter(function (o) { return o.owner_id === id; })[0]; }
+  function tabHTML() {
+    if (detailData === null) return '<p class="hint-line">Memuat data toko...</p>';
+    if (detailTab === 'bill') {
+      if (!detailData.invoices.length) return '<p class="hint-line">Belum ada tagihan untuk toko ini.</p>';
+      return '<ul class="log">' + detailData.invoices.map(function (v) {
+        return '<li><span class="l"><b>' + esc(v.invoice_number) + '</b><br><span style="color:var(--muted)">' + esc(v.status) + '</span></span><span class="r num">' + esc(money(v.total_minor, v.currency)) + '<br>' + esc(dateTxt(v.created_at)) + '</span></li>';
+      }).join('') + '</ul>';
+    }
+    if (!detailData.activity.length) return '<p class="hint-line">Belum ada aktivitas tercatat.</p>';
+    return '<ul class="log">' + detailData.activity.map(function (a) {
+      var label = ACTION_LABEL[a.action] || a.action;
+      return '<li><span class="l"><b>' + esc(label) + '</b><br><span style="color:var(--muted)">' + esc(a.who || '-') + (a.detail ? ' · ' + esc(a.detail) : '') + '</span></span><span class="r">' + esc(dateTxt(a.t)) + '</span></li>';
+    }).join('') + '</ul>';
   }
+  function detailHTML(o, confirmSuspend) {
+    var sub = o.sub_status ? ((SUBST[o.sub_status] || o.sub_status) + (o.current_period_end ? ', sampai ' + dateTxt(o.current_period_end) : '')) : '-';
+    var statusBtn = o.active
+      ? '<button type="button" class="btn danger" data-act="suspend">Tangguhkan owner</button>'
+      : '<button type="button" class="btn primary" data-act="activate">Aktifkan kembali</button>';
+    var confirmBox = confirmSuspend
+      ? '<div class="confirm"><p>Tangguhkan ' + esc(o.owner_name) + '? Owner dan ' + (o.staff_count || 0) + ' stafnya langsung keluar dan tidak bisa masuk lagi.</p><div class="pair"><button type="button" class="btn" data-act="cancel-suspend">Batal</button><button type="button" class="btn solid-danger" data-act="do-suspend">Ya, tangguhkan</button></div></div>'
+      : statusBtn;
+    var planSel = o.store_id
+      ? '<label class="lbl-f" for="planSel">Paket langganan<select class="select" id="planSel">' + (o.plan_code ? '' : '<option value="" selected disabled>Pilih paket</option>') + plans.map(function (p) { return '<option value="' + esc(p.code) + '"' + (p.code === o.plan_code ? ' selected' : '') + '>' + esc(p.name) + '</option>'; }).join('') + '</select></label>'
+      : '<p class="hint-line">Owner ini belum membuat toko, jadi paket dan tagihan belum bisa diatur.</p>';
+    var tabs = o.store_id
+      ? '<div class="tabs" role="tablist"><button type="button" role="tab" data-tab2="bill" aria-selected="' + (detailTab === 'bill') + '">Tagihan</button><button type="button" role="tab" data-tab2="log" aria-selected="' + (detailTab === 'log') + '">Aktivitas</button></div><div id="tabBody">' + tabHTML() + '</div>'
+      : '';
+    return '<div class="sheet-top">' + avatar(o, true) + '<div class="txt"><h2 id="sheetTitle">' + esc(o.owner_name) + '</h2><div class="em">' + esc(o.email || '-') + '</div><div style="margin-top:6px">' + pill(o.status) + '</div></div>' +
+      '<button type="button" class="icon-btn" data-act="close" aria-label="Tutup"><svg class="i" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></svg></button></div>' +
+      '<dl class="info"><div><dt>Toko</dt><dd>' + (o.store_name ? esc(o.store_name) + ' <span style="color:var(--muted);font-weight:500">(' + esc(o.store_code) + ')</span>' : 'Belum ada') + '</dd></div>' +
+      '<div><dt>Staf</dt><dd>' + (o.store_id ? (o.staff_count || 0) + ' orang' : '-') + '</dd></div>' +
+      '<div><dt>Terdaftar</dt><dd>' + esc(dateTxt(o.joined)) + '</dd></div>' +
+      '<div><dt>Terakhir masuk</dt><dd>' + (o.lastDays === null ? 'Belum pernah' : rel(o.lastDays)) + '</dd></div>' +
+      '<div><dt>Telepon</dt><dd>' + esc(o.phone || '-') + '</dd></div>' +
+      '<div><dt>Langganan</dt><dd>' + esc(sub) + '</dd></div></dl>' +
+      planSel + tabs + '<div class="actions">' + confirmBox + '</div>';
+  }
+  function paintSheet(confirmSuspend) { var o = byId(openId); if (!o) return; $('#sheet').innerHTML = detailHTML(o, !!confirmSuspend); }
   function openSheet(html) {
-    lastFocus = document.activeElement;
-    $('#sheet').innerHTML = html; $('#scrim').hidden = false;
-    var f = $('#sheet').querySelector('input, select, button'); if (f) f.focus();
+    lastFocus = document.activeElement; $('#sheet').innerHTML = html; $('#scrim').hidden = false;
+    var f = $('#sheet').querySelector('button, select'); if (f) f.focus();
   }
-  function closeSheet() {
-    $('#scrim').hidden = true; $('#sheet').innerHTML = '';
-    if (lastFocus && document.contains(lastFocus)) lastFocus.focus();
+  function closeSheet() { $('#scrim').hidden = true; $('#sheet').innerHTML = ''; openId = null; if (lastFocus && document.contains(lastFocus)) lastFocus.focus(); }
+  async function openDetail(id) {
+    var o = byId(id); if (!o) return;
+    openId = id; detailData = null; detailTab = 'bill';
+    openSheet(detailHTML(o, false));
+    if (!o.store_id) return;
+    try {
+      var d = await api('detail', { store_id: o.store_id });
+      if (openId === id) { detailData = d; var b = $('#tabBody'); if (b) b.innerHTML = tabHTML(); }
+    } catch (e) { if (openId === id) { detailData = { invoices: [], activity: [] }; var b2 = $('#tabBody'); if (b2) b2.innerHTML = '<p class="err">' + esc(e.message) + '</p>'; } }
   }
-  function byId(id) { return users.filter(function (u) { return u.id === id; })[0]; }
-
-  function detailHTML(u, confirmDel) {
-    var statusBtn = '';
-    if (u.status === 'active') statusBtn = '<button type="button" class="btn" data-act="suspend"' + (u.me ? ' disabled' : '') + '>Tangguhkan</button>';
-    else if (u.status === 'suspended') statusBtn = '<button type="button" class="btn primary" data-act="activate">Aktifkan kembali</button>';
-    else statusBtn = '<button type="button" class="btn primary" data-act="resend">Kirim ulang undangan</button>';
-    var resetBtn = '<button type="button" class="btn" data-act="reset"' + '>' + ICON.key + 'Kirim tautan masuk</button>';
-    var del = confirmDel
-      ? '<div class="confirm"><p>Hapus ' + esc(u.name) + '? User ini tidak bisa masuk lagi.</p><div class="pair"><button type="button" class="btn" data-act="cancel-del">Batal</button><button type="button" class="btn solid-danger" data-act="del-yes">Ya, hapus</button></div></div>'
-      : '<button type="button" class="btn danger" data-act="del"' + (u.me ? ' disabled' : '') + '>Hapus user</button>';
-    return '<div class="sheet-top">' + avatar(u, true) + '<div class="txt"><h2 id="sheetTitle">' + esc(u.name) + '</h2><div class="em">' + esc(u.email) + '</div><div style="margin-top:6px">' + pill(u.status) + '</div></div>' +
-      '<button type="button" class="icon-btn" data-act="close" aria-label="Tutup"><svg class="i" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></svg></button></div>' +
-      '<dl class="info"><div><dt>Outlet</dt><dd>' + esc(u.outlet) + '</dd></div><div><dt>Terakhir aktif</dt><dd>' + lastText(u) + '</dd></div><div><dt>Bergabung</dt><dd>' + joinText(u) + '</dd></div><div><dt>Verifikasi 2 langkah</dt><dd>' + (u.twofa ? 'Aktif' : 'Belum aktif') + '</dd></div></dl>' +
-      '<label class="lbl-f" for="roleSel">Peran<select class="select" id="roleSel"' + (u.me ? ' disabled' : '') + '>' +
-      ['Owner', 'Admin', 'Manajer', 'Staf'].map(function (r) { return '<option' + (r === u.role ? ' selected' : '') + '>' + r + '</option>'; }).join('') + '</select></label>' +
-      '<p class="hint-line">' + (u.me ? 'Ini akun kamu, jadi peran dan status tidak bisa diubah di sini.' : ROLE_NOTE[u.role]) + '</p>' +
-      '<div class="actions"><div class="pair">' + statusBtn + resetBtn + '</div>' + del + '</div>';
-  }
-  var openId = null;
-  function openDetail(id) { var u = byId(id); if (!u) return; openId = id; openSheet(detailHTML(u, false)); }
-  function refreshDetail(confirmDel) { var u = byId(openId); if (!u) return; $('#sheet').innerHTML = detailHTML(u, !!confirmDel); var f = $('#sheet').querySelector('[data-act="close"]'); if (f) f.focus(); }
-
-  function openAdd() {
-    openId = null;
-    openSheet('<div class="sheet-top"><div class="txt"><h2 id="sheetTitle">Tambah user</h2><div class="em">User baru menerima undangan lewat email.</div></div>' +
-      '<button type="button" class="icon-btn" data-act="close" aria-label="Tutup"><svg class="i" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></svg></button></div>' +
-      '<form id="addForm" novalidate style="display:flex;flex-direction:column;gap:14px">' +
-      '<label class="lbl-f" for="fName">Nama lengkap<input class="input" id="fName" autocomplete="off" placeholder="Contoh: Putri Maharani"></label>' +
-      '<label class="lbl-f" for="fEmail">Email<input class="input" id="fEmail" type="email" autocomplete="off" placeholder="nama@ordela.id"></label>' +
-      '<div class="pair"><label class="lbl-f" for="fRole">Peran<select class="select" id="fRole"><option>Staf</option><option>Manajer</option><option>Admin</option></select></label>' +
-      '<label class="lbl-f" for="fOutlet">Outlet<select class="select" id="fOutlet"><option>Pusat</option><option>Kemang</option><option>Senayan</option><option>Bandung Dago</option><option>Surabaya Tunjungan</option></select></label></div>' +
-      '<p class="err" id="fErr" role="alert" hidden></p>' +
-      '<button type="submit" class="btn primary">Kirim undangan</button></form>');
+  async function mutate(fn, okMsg) {
+    if (busy) return; busy = true;
+    try {
+      await fn(); await load();
+      var o = byId(openId);
+      if (o) { detailData = null; paintSheet(false); if (o.store_id) { try { detailData = await api('detail', { store_id: o.store_id }); var b = $('#tabBody'); if (b) b.innerHTML = tabHTML(); } catch (e) { /* abaikan */ } } }
+      toast(okMsg);
+    } catch (e) { toast('Gagal: ' + e.message); paintSheet(false); }
+    finally { busy = false; }
   }
 
   document.addEventListener('click', function (e) {
     var t = e.target;
     var row = t.closest('.row'); if (row) { openDetail(row.dataset.id); return; }
     var chip = t.closest('.chip'); if (chip) { state.status = chip.dataset.status; renderTiles(); renderList(); return; }
-    if (t.closest('#addBtn')) { openAdd(); return; }
-    if (t.closest('#bell')) { var n = count(function (u) { return u.status === 'pending'; }); toast(n ? n + ' undangan masih menunggu jawaban' : 'Tidak ada notifikasi baru'); return; }
+    if (t.closest('#bell')) { var n = count(function (o) { return o.status === 'new'; }); toast(n ? n + ' owner baru perlu dicek' : 'Tidak ada owner baru'); return; }
     if (t === $('#scrim')) { closeSheet(); return; }
+    var tb = t.closest('[data-tab2]'); if (tb) { detailTab = tb.dataset.tab2; document.querySelectorAll('[data-tab2]').forEach(function (b) { b.setAttribute('aria-selected', String(b === tb)); }); $('#tabBody').innerHTML = tabHTML(); return; }
     var b = t.closest('[data-act]'); if (!b || b.disabled) return;
-    var act = b.dataset.act, u = byId(openId);
+    var act = b.dataset.act, o = byId(openId);
     if (act === 'close') closeSheet();
-    else if (act === 'suspend') save(u, { status: 'suspended' }, u.name + ' ditangguhkan');
-    else if (act === 'activate') save(u, { status: 'active' }, u.name + ' diaktifkan kembali');
-    else if (act === 'resend' || act === 'reset') sendLink(u.email).then(function (er) { toast(er ? 'Gagal mengirim: ' + er.message : 'Tautan masuk dikirim ke ' + u.email); });
-    else if (act === 'del') refreshDetail(true);
-    else if (act === 'cancel-del') refreshDetail(false);
-    else if (act === 'del-yes') { sb.from('ordela_users').delete().eq('id', u.id).then(function (r) { if (r.error) { toast('Gagal menghapus: ' + r.error.message); return; } closeSheet(); load().then(function () { toast(u.name + ' dihapus'); }); }); }
+    else if (act === 'suspend') paintSheet(true);
+    else if (act === 'cancel-suspend') paintSheet(false);
+    else if (act === 'do-suspend') mutate(function () { return api('set_active', { owner_id: o.owner_id, active: false }); }, o.owner_name + ' ditangguhkan');
+    else if (act === 'activate') mutate(function () { return api('set_active', { owner_id: o.owner_id, active: true }); }, o.owner_name + ' diaktifkan kembali');
   });
   document.addEventListener('change', function (e) {
-    if (e.target.id === 'roleSel') { var u = byId(openId), nr = e.target.value; save(u, { role: nr }, 'Peran ' + u.name + ' kini ' + nr); }
+    if (e.target.id === 'planSel') {
+      var o = byId(openId), p = e.target.value;
+      mutate(function () { return api('set_plan', { store_id: o.store_id, plan_code: p }); }, 'Paket ' + o.store_name + ' kini ' + (planNames[p] || p));
+    }
   });
-  document.addEventListener('submit', async function (e) {
-    if (e.target.id !== 'addForm') return;
-    e.preventDefault();
-    var name = $('#fName').value.trim(), email = $('#fEmail').value.trim().toLowerCase(), err = $('#fErr'), msg = '';
-    if (!name) msg = 'Isi nama lengkap user.';
-    else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) msg = 'Tulis email dengan format nama@domain.com.';
-    else if (users.some(function (x) { return x.email.toLowerCase() === email; })) msg = 'Email ini sudah terdaftar.';
-    if (msg) { err.textContent = msg; err.hidden = false; return; }
-    var ins = await sb.from('ordela_users').insert({ name: name, email: email, role: $('#fRole').value, outlet: $('#fOutlet').value });
-    if (ins.error) { err.textContent = ins.error.code === '23505' ? 'Email ini sudah terdaftar.' : 'Gagal menyimpan: ' + ins.error.message; err.hidden = false; return; }
-    var mailErr = await sendLink(email);
-    await load();
-    state.status = 'all'; state.q = ''; state.role = 'all'; $('#q').value = ''; $('#roleFilter').value = 'all';
-    renderAll(); closeSheet(); toast(mailErr ? 'User dibuat, tautan masuk belum terkirim: ' + mailErr.message : 'Undangan dikirim ke ' + email);
-  });
-  document.addEventListener('keydown', function (e) {
-    if (e.key === 'Escape' && !$('#scrim').hidden) closeSheet();
-  });
+  document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && !$('#scrim').hidden) closeSheet(); });
   $('#q').addEventListener('input', function (e) { state.q = e.target.value; renderList(); });
-  $('#roleFilter').addEventListener('change', function (e) { state.role = e.target.value; renderList(); });
+  $('#planFilter').addEventListener('change', function (e) { state.plan = e.target.value; renderList(); });
   $('#sort').addEventListener('change', function (e) { state.sort = e.target.value; renderList(); });
 
-  function bigRing(p) {
-    var c = 2 * Math.PI * 40;
-    return '<svg viewBox="0 0 92 92" aria-hidden="true"><circle class="t" cx="46" cy="46" r="40"/><circle class="v" cx="46" cy="46" r="40" transform="rotate(-90 46 46)" stroke-dasharray="' + (c * p / 100).toFixed(1) + ' ' + c.toFixed(1) + '"/></svg><span>' + p + '%</span>';
-  }
+  /* Analitik dan profil */
   function bars(items) {
     var max = Math.max.apply(null, items.map(function (i) { return i[1]; }).concat(1));
     return '<ul class="bars">' + items.map(function (i) {
@@ -584,70 +604,64 @@ body { margin: 0; }
     }).join('') + '</ul>';
   }
   function renderAnalytics() {
-    var total = users.length;
-    var st = [['Aktif', 'active', '--ok'], ['Menunggu', 'pending', '--warn'], ['Ditangguhkan', 'suspended', '--crit']].map(function (s) {
-      return [s[0], count(function (u) { return u.status === s[1]; }), s[2]];
-    });
-    var withTwo = count(function (u) { return u.twofa; });
-    var pct = total ? Math.round(withTwo / total * 100) : 0;
-    var roles = ['Owner', 'Admin', 'Manajer', 'Staf'].map(function (r, i) { return [r, count(function (u) { return u.role === r; }), ['--violet', '--info', '--warn', '--ok'][i]]; });
-    var outlets = {};
-    users.forEach(function (u) { outlets[u.outlet] = (outlets[u.outlet] || 0) + 1; });
-    var outletItems = Object.keys(outlets).sort(function (a, b) { return outlets[b] - outlets[a]; }).map(function (k) { return [k, outlets[k], '--info']; });
+    var total = owners.length;
+    var paid = count(function (o) { return PAID.indexOf(o.plan_code) > -1; });
+    var pct = total ? Math.round(paid / total * 100) : 0;
+    var planItems = plans.map(function (p, i) { return [p.name, count(function (o) { return o.plan_code === p.code; }), ['--ok', '--info', '--violet', '--warn', '--crit'][i % 5]]; });
+    planItems.push(['Belum ada paket', count(function (o) { return !o.plan_code; }), '--warn']);
+    var st = [['Baru', 'new', '--info'], ['Aktif', 'active', '--ok'], ['Ditangguhkan', 'suspended', '--crit']].map(function (s) { return [s[0], count(function (o) { return o.status === s[1]; }), s[2]]; });
+    var months = [], now = new Date();
+    for (var k = 5; k >= 0; k--) { var d = new Date(now.getFullYear(), now.getMonth() - k, 1); months.push({ y: d.getFullYear(), m: d.getMonth(), label: d.toLocaleDateString('id-ID', { month: 'short', year: '2-digit' }), n: 0 }); }
+    owners.forEach(function (o) { if (!o.joined) return; var d = new Date(o.joined); months.forEach(function (m) { if (m.y === d.getFullYear() && m.m === d.getMonth()) m.n++; }); });
     $('#view-analytics').innerHTML =
-      '<section class="hero"><div><h2>Cakupan 2FA</h2><p class="num">' + withTwo + '/' + total + ' user sudah memakai verifikasi 2 langkah</p></div><div class="big num">' + bigRing(pct) + '</div></section>' +
-      '<section class="card"><h3>Sebaran status</h3>' +
-      '<div class="stack" role="img" aria-label="' + st.map(function (s) { return s[0] + ' ' + s[1]; }).join(', ') + '">' +
+      '<section class="hero"><div><h2>Owner berbayar</h2><p class="num">' + paid + ' dari ' + total + ' owner memakai paket Pro ke atas</p></div><div class="big num">' + bigRing(pct) + '</div></section>' +
+      '<div class="grid2"><section class="card"><h3>Owner per paket</h3>' + bars(planItems) + '</section>' +
+      '<section class="card"><h3>Pendaftaran per bulan</h3>' + bars(months.map(function (m) { return [m.label, m.n, '--info']; })) + '</section></div>' +
+      '<section class="card"><h3>Sebaran status</h3><div class="stack" role="img" aria-label="' + st.map(function (s) { return s[0] + ' ' + s[1]; }).join(', ') + '">' +
       st.filter(function (s) { return s[1] > 0; }).map(function (s) { return '<i style="flex:' + s[1] + ';background:var(' + s[2] + ')"></i>'; }).join('') + '</div>' +
-      '<ul class="legend">' + st.map(function (s) { return '<li><i style="background:var(' + s[2] + ')"></i>' + s[0] + ' <b class="num">' + s[1] + '</b></li>'; }).join('') + '</ul></section>' +
-      '<div class="grid2"><section class="card"><h3>User per peran</h3>' + bars(roles) + '</section>' +
-      '<section class="card"><h3>User per outlet</h3>' + bars(outletItems) + '</section></div>' +
-      '<p class="note">Dihitung dari data di Supabase.</p>';
+      '<ul class="legend">' + st.map(function (s) { return '<li><i style="background:var(' + s[2] + ')"></i>' + s[0] + ' <b class="num">' + s[1] + '</b></li>'; }).join('') + '</ul></section>';
   }
   function renderProfile() {
-    var me = users.filter(function (u) { return u.me; })[0];
-    var managed = users.length - 1;
+    var stores = count(function (o) { return !!o.store_id; });
     $('#view-profile').innerHTML =
-      '<section class="card" style="align-items:flex-start"><div class="sheet-top" style="width:100%">' + avatar(me, true) + '<div class="txt"><h2 style="margin:0;font-size:22px;font-weight:800">' + esc(me.name) + '</h2><div class="em" style="color:var(--muted)">' + esc(me.email) + '</div><div style="margin-top:6px">' + pill(me.status) + '</div></div></div>' +
-      '<dl class="info" style="width:100%"><div><dt>Peran</dt><dd>' + esc(me.role) + '</dd></div><div><dt>Outlet</dt><dd>' + esc(me.outlet) + '</dd></div><div><dt>Bergabung</dt><dd>' + joinText(me) + '</dd></div><div><dt>Verifikasi 2 langkah</dt><dd>' + (me.twofa ? 'Aktif' : 'Belum aktif') + '</dd></div></dl></section>' +
-      '<section class="card"><h3>Akses akun</h3><p class="hint-line" style="margin:0">' + esc(ROLE_NOTE[me.role]) + '. Kamu mengelola ' + managed + ' user lain di Ordela.</p></section>' +
+      '<section class="card"><div class="sheet-top"><span class="avatar lg" style="--c:var(--accent)" aria-hidden="true">' + esc(initials(adminEmail.split('@')[0])) + '</span><div class="txt"><h2 style="margin:0;font-size:20px;font-weight:800;overflow-wrap:anywhere">' + esc(adminEmail) + '</h2><div class="em" style="color:var(--muted)">Admin Ordela</div></div></div>' +
+      '<p class="hint-line" style="margin:0">Kamu bisa melihat ' + owners.length + ' owner dan ' + stores + ' toko, mengubah paket, dan menangguhkan owner.</p></section>' +
       '<button type="button" class="btn" id="logoutBtn">Keluar</button>';
   }
-  var TITLES = { home: 'Kelola user', analytics: 'Analitik user', profile: 'Profil' };
+  var TITLES = { home: 'Owner', analytics: 'Analitik owner', profile: 'Profil' };
   function showTab(t) {
     ['home', 'analytics', 'profile'].forEach(function (k) { $('#view-' + k).hidden = k !== t; });
-    document.querySelectorAll('.nav button').forEach(function (b) {
-      if (b.dataset.tab === t) b.setAttribute('aria-current', 'page'); else b.removeAttribute('aria-current');
-    });
-    $('#addBtn').hidden = t !== 'home';
+    document.querySelectorAll('.nav button').forEach(function (b) { if (b.dataset.tab === t) b.setAttribute('aria-current', 'page'); else b.removeAttribute('aria-current'); });
     $('#pageTitle').textContent = TITLES[t];
     if (t === 'analytics') renderAnalytics();
     if (t === 'profile') renderProfile();
     window.scrollTo(0, 0);
   }
-  document.querySelector('.nav').addEventListener('click', function (e) {
-    var b = e.target.closest('button[data-tab]'); if (b) showTab(b.dataset.tab);
-  });
+  document.querySelector('.nav').addEventListener('click', function (e) { var b = e.target.closest('button[data-tab]'); if (b) showTab(b.dataset.tab); });
 
+  /* Masuk */
   function showGate(on, sub, signedIn) {
     $('#gate').hidden = !on; $('#appRoot').hidden = on; $('#dock').hidden = on;
     if (sub) $('#gateSub').textContent = sub;
-    $('#gateOut').hidden = !signedIn;
-    $('#loginForm').hidden = !!signedIn;
+    $('#gateOut').hidden = !signedIn; $('#loginForm').hidden = !!signedIn;
+  }
+  async function sendLink(email) {
+    var r = await sb.auth.signInWithOtp({ email: email, options: { emailRedirectTo: location.origin + location.pathname, shouldCreateUser: false } });
+    return r.error;
   }
   var booting = false;
   async function boot() {
     if (booting) return; booting = true;
     try {
       var sess = (await sb.auth.getSession()).data.session;
-      if (!sess) { showGate(true, 'Kami kirim tautan masuk ke email Owner atau Admin.', false); return; }
-      meEmail = (sess.user.email || '').toLowerCase();
-      await sb.from('ordela_users').update({ status: 'active', last_active_at: new Date().toISOString() }).eq('email', meEmail).neq('status', 'suspended');
-      if (!(await load())) return;
-      var me = users.filter(function (u) { return u.me; })[0];
-      if (!me) { showGate(true, meEmail + ' belum terdaftar sebagai Owner atau Admin Ordela.', true); return; }
-      $('#hello').textContent = 'Selamat datang kembali, ' + me.name.split(' ')[0];
-      $('#meAv').textContent = initials(me.name);
+      if (!sess) { showGate(true, 'Kami kirim tautan masuk ke email admin Ordela.', false); return; }
+      adminEmail = (sess.user.email || '').toLowerCase();
+      try { await load(); }
+      catch (e) {
+        showGate(true, e.status === 403 ? adminEmail + ' tidak punya akses admin Ordela.' : 'Data belum bisa dimuat: ' + e.message, true);
+        return;
+      }
+      $('#meAv').textContent = initials(adminEmail.split('@')[0]);
       showGate(false);
     } finally { booting = false; }
   }
