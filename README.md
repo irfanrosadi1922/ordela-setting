@@ -9,6 +9,10 @@ Halaman admin Ordela untuk mengelola **owner** (pelanggan Ordela): `index.html`,
 - Ubah paket langganan toko (Starter, Pro, Business, Enterprise, Legacy).
 - Tangguhkan atau aktifkan owner. Penangguhan juga mengeluarkan sesi owner dan stafnya, lalu menandai langganan `suspended`.
 - Analitik ringkas: owner per paket, pendaftaran per bulan, sebaran status.
+- Hapus owner secara permanen (toko, staf, pesanan, tagihan, dan akun login ikut terhapus). Wajib mengetik email owner untuk konfirmasi, dan akunmu sendiri tidak bisa dihapus.
+- Notifikasi interaktif: owner baru, belum punya toko, ditangguhkan, dan lama tidak masuk. Bisa ditandai dibaca, dan tiap item membuka detail owner. Status dibaca disimpan di browser.
+- Profil admin dengan nama dan foto sendiri, disimpan di tabel `public.ordela_admin_profile` lewat Edge Function.
+- Halaman tidak bisa di-zoom, dan teks tidak bisa disalin kecuali di kolom isian. Ini hanya penghalang ringan, bukan pengaman data.
 
 ## Cara kerja
 

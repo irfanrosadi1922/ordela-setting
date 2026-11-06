@@ -2,7 +2,7 @@
 <html lang="id">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <title>Owner Ordela</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -398,6 +398,47 @@ body { margin: 0; }
   .plan-features { grid-template-columns:1fr; }
 }
 
+/* Tanpa zoom dan salin teks (kecuali di kolom isian) */
+html { -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; -webkit-text-size-adjust: 100%; }
+body { touch-action: pan-x pan-y; -webkit-tap-highlight-color: transparent; }
+input, textarea, select { -webkit-user-select: text; user-select: text; }
+img { -webkit-user-drag: none; user-drag: none; }
+.input, .select { font-size: 16px; }
+
+/* Semua tombol memberi respons */
+button { transition: transform .12s ease, filter .15s ease, background-color .15s ease, opacity .15s ease; }
+button:active:not(:disabled) { transform: scale(.965); }
+.row:active:not(:disabled) { transform: scale(.985); }
+.nav button:active:not(:disabled) { transform: scale(.94); }
+button.loading { position: relative; color: transparent !important; pointer-events: none; }
+button.loading::after { content: ""; position: absolute; inset: 0; margin: auto; width: 18px; height: 18px; border-radius: 50%; border: 2.5px solid var(--line); border-top-color: var(--fg); animation: spin .7s linear infinite; }
+.btn.primary.loading::after { border-color: rgba(0, 0, 0, .22); border-top-color: var(--on-accent); }
+.btn.solid-danger.loading::after { border-color: rgba(0, 0, 0, .22); border-top-color: var(--on-accent); }
+@keyframes spin { to { rotate: 360deg; } }
+.avatar { overflow: hidden; }
+button.avatar { border: 0; padding: 0; cursor: pointer; }
+.avatar img { width: 100%; height: 100%; object-fit: cover; display: block; }
+
+/* Notifikasi */
+.icon-btn .badge { position: absolute; top: -3px; right: -3px; min-width: 20px; height: 20px; padding: 0 5px; border-radius: 99px; background: var(--accent); color: var(--on-accent); font-size: 11px; font-weight: 800; display: grid; place-items: center; line-height: 1; border: 2px solid var(--bg); }
+.notifs { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; max-height: 50vh; overflow: auto; }
+.notif { width: 100%; border: 0; text-align: left; background: var(--surface-2); border-radius: 18px; padding: 12px 14px; display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 12px; align-items: center; }
+.notif:hover { filter: brightness(1.1); }
+.notif:not(.unread) { opacity: .7; }
+.nico { width: 36px; height: 36px; border-radius: 50%; background: color-mix(in srgb, var(--c) 22%, var(--surface)); position: relative; }
+.nico::after { content: ""; position: absolute; inset: 12px; border-radius: 50%; background: var(--c); }
+.ntxt { min-width: 0; display: flex; flex-direction: column; }
+.ntxt b { font-weight: 600; overflow-wrap: anywhere; }
+.notif.unread .ntxt b { font-weight: 800; }
+.ntxt small { color: var(--muted); font-size: 12.5px; overflow-wrap: anywhere; }
+.ntime { color: var(--muted); font-size: 12px; display: flex; flex-direction: column; align-items: flex-end; gap: 6px; white-space: nowrap; }
+.udot { width: 9px; height: 9px; border-radius: 50%; background: var(--accent); display: block; }
+.btn.sm { height: 36px; padding: 0 14px; font-size: 13px; }
+.empty-note { text-align: center; padding: 18px 0; }
+.del-list { margin: 0; padding-left: 18px; font-size: 14px; display: flex; flex-direction: column; gap: 2px; }
+.toast { display: flex; align-items: center; justify-content: center; }
+.toast.act { pointer-events: auto; }
+.toast button { margin-left: 14px; border: 0; background: transparent; color: var(--bg); font-weight: 800; text-decoration: underline; text-underline-offset: 3px; padding: 6px 2px; }
 </style>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
 </head>
@@ -433,14 +474,14 @@ body { margin: 0; }
 
 <div class="app" id="appRoot" hidden>
   <header class="top">
-    <div class="avatar" id="meAv" style="--c: var(--accent)" aria-hidden="true">OA</div>
+    <button type="button" class="avatar" id="meAv" style="--c: var(--accent)" aria-label="Buka profil">OA</button>
     <div class="who-me">
-      <div class="hello">Admin Ordela</div>
+      <div class="hello" id="hello">Admin Ordela</div>
       <h1 id="pageTitle">Owner</h1>
     </div>
     <button class="icon-btn" id="bell" type="button" aria-label="Owner baru">
       <svg class="i" viewBox="0 0 24 24"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 8 3 8H3s3-1 3-8"/><path d="M10.3 20a2 2 0 0 0 3.4 0"/></svg>
-      <span class="dot" id="bellDot" hidden></span>
+      <span class="badge" id="bellDot" hidden>0</span>
     </button>
   </header>
 
@@ -526,6 +567,14 @@ body { margin: 0; }
 
   var owners = [], plans = [], planNames = {};
   var adminEmail = '';
+  var profile = { name: '', photo: null }, pendingPhoto, delPreview = null, notifTab = 'unread', sheetKind = 'detail', readIds = [];
+  try { readIds = JSON.parse(localStorage.getItem('ordela_notif_read') || '[]'); } catch (e) { readIds = []; }
+  function saveRead() { try { localStorage.setItem('ordela_notif_read', JSON.stringify(readIds.slice(-300))); } catch (e) { /* abaikan */ } }
+  function buzz() { try { if (navigator.vibrate) navigator.vibrate(8); } catch (e) { /* abaikan */ } }
+  function setBusy(btn, on) { if (!btn) return; btn.classList.toggle('loading', !!on); btn.disabled = !!on; }
+  function busyWrap(fn) { return function (e) { var b = this; setBusy(b, true); return Promise.resolve(fn.call(b, e)).finally(function () { setBusy(b, false); }); }; }
+  function meAvatar() { return profile.photo ? '<img src="' + esc(profile.photo) + '" alt="" draggable="false">' : esc(initials(profile.name || adminEmail.split('@')[0])); }
+  function paintMe() { $('#meAv').innerHTML = meAvatar(); $('#hello').textContent = profile.name ? 'Halo, ' + profile.name.split(' ')[0] : 'Admin Ordela'; }
   var state = { status: 'all', q: '', plan: 'all', sort: 'recent' };
   var openId = null, detailData = null, detailTab = 'bill', busy = false, lastFocus = null, toastTimer;
 
@@ -566,7 +615,17 @@ body { margin: 0; }
     var c = 2 * Math.PI * 40;
     return '<svg viewBox="0 0 92 92" aria-hidden="true"><circle class="t" cx="46" cy="46" r="40"/><circle class="v" cx="46" cy="46" r="40" transform="rotate(-90 46 46)" stroke-dasharray="' + (c * p / 100).toFixed(1) + ' ' + c.toFixed(1) + '"/></svg><span>' + p + '%</span>';
   }
-  function toast(msg) { var t = $('#toast'); t.textContent = msg; t.classList.add('show'); clearTimeout(toastTimer); toastTimer = setTimeout(function () { t.classList.remove('show'); }, 3000); }
+  function toast(msg, action) {
+    var t = $('#toast'); t.innerHTML = '';
+    var sp = document.createElement('span'); sp.textContent = msg; t.appendChild(sp);
+    if (action) {
+      var ab = document.createElement('button'); ab.type = 'button'; ab.textContent = action.label;
+      ab.addEventListener('click', function () { t.classList.remove('show', 'act'); clearTimeout(toastTimer); action.fn(); });
+      t.appendChild(ab);
+    }
+    t.classList.toggle('act', !!action); t.classList.add('show'); clearTimeout(toastTimer);
+    toastTimer = setTimeout(function () { t.classList.remove('show', 'act'); }, action ? 7000 : 3000);
+  }
 
   async function load() {
     var d = await api('list');
@@ -586,9 +645,7 @@ body { margin: 0; }
     $('#heroSub').textContent = fresh + ' mendaftar 30 hari terakhir, ' + noStore + ' belum punya toko';
     $('#heroRing').innerHTML = bigRing(pct);
     $('#heroRing').setAttribute('aria-label', pct + '% owner sudah membuka toko');
-    var n = count(function (o) { return o.status === 'new'; });
-    $('#bellDot').hidden = n === 0;
-    $('#bell').setAttribute('aria-label', n + ' owner baru');
+    updateBell();
   }
   function renderTiles() {
     var defs = [['all', 'Semua', owners.length], ['new', 'Baru', count(function (o) { return o.status === 'new'; })], ['active', 'Aktif', count(function (o) { return o.status === 'active'; })], ['suspended', 'Ditangguhkan', count(function (o) { return o.status === 'suspended'; })]];
@@ -655,16 +712,61 @@ body { margin: 0; }
       return '<li><span class="l"><b>' + esc(label) + '</b><br><span style="color:var(--muted)">' + esc(a.who || '-') + (a.detail ? ' · ' + esc(a.detail) : '') + '</span></span><span class="r">' + esc(dateTxt(a.t)) + '</span></li>';
     }).join('') + '</ul>';
   }
-  function detailHTML(o, confirmSuspend) {
+  /* Notifikasi */
+  function buildNotifs() {
+    var out = [];
+    owners.forEach(function (o) {
+      var nm = o.owner_name || 'Owner';
+      if (!o.active) { out.push({ id: 'susp:' + o.owner_id, owner: o.owner_id, tone: '--crit', title: nm + ' ditangguhkan', sub: 'Owner dan stafnya tidak bisa masuk', days: o.lastDays === null ? 0 : o.lastDays }); return; }
+      if (o.joinedDays !== null && o.joinedDays <= 14) out.push({ id: 'new:' + o.owner_id + ':' + String(o.joined).slice(0, 10), owner: o.owner_id, tone: '--info', title: nm + ' mendaftar', sub: o.store_id ? 'Toko ' + o.store_name : 'Belum membuat toko', days: o.joinedDays });
+      if (!o.store_id && o.joinedDays !== null && o.joinedDays >= 1) out.push({ id: 'nostore:' + o.owner_id, owner: o.owner_id, tone: '--warn', title: nm + ' belum punya toko', sub: 'Daftar ' + rel(o.joinedDays).toLowerCase() + ', perlu dibantu memulai', days: o.joinedDays });
+      if (o.lastDays !== null && o.lastDays >= 14) out.push({ id: 'idle:' + o.owner_id + ':' + Math.floor(o.lastDays / 7), owner: o.owner_id, tone: '--info', title: nm + ' lama tidak masuk', sub: 'Terakhir masuk ' + rel(o.lastDays).toLowerCase(), days: o.lastDays });
+    });
+    out.sort(function (x, y) { return x.days - y.days; });
+    return out;
+  }
+  function isUnread(n) { return readIds.indexOf(n.id) < 0; }
+  function updateBell() {
+    var n = buildNotifs().filter(isUnread).length, bd = $('#bellDot');
+    bd.hidden = n === 0; bd.textContent = n > 9 ? '9+' : String(n);
+    $('#bell').setAttribute('aria-label', n ? n + ' notifikasi belum dibaca' : 'Notifikasi');
+  }
+  function notifHTML() {
+    var all = buildNotifs(), un = all.filter(isUnread), list = notifTab === 'unread' ? un : all;
+    var items = list.length
+      ? '<ul class="notifs">' + list.map(function (n) {
+          var u = isUnread(n);
+          return '<li><button type="button" class="notif' + (u ? ' unread' : '') + '" data-notif="' + esc(n.id) + '" data-owner="' + esc(n.owner) + '"><span class="nico" style="--c:var(' + n.tone + ')"></span><span class="ntxt"><b>' + esc(n.title) + '</b><small>' + esc(n.sub) + '</small></span><span class="ntime">' + (u ? '<i class="udot"></i>' : '') + '<span>' + esc(rel(n.days)) + '</span></span></button></li>';
+        }).join('') + '</ul>'
+      : '<p class="hint-line empty-note">' + (notifTab === 'unread' ? 'Semua notifikasi sudah dibaca.' : 'Belum ada notifikasi.') + '</p>';
+    return '<div class="sheet-top"><div class="txt"><h2 id="sheetTitle">Notifikasi</h2><div class="em">' + (un.length ? un.length + ' belum dibaca' : 'Tidak ada yang baru') + '</div></div>' +
+      (un.length ? '<button type="button" class="btn sm" data-act="read-all">Tandai dibaca</button>' : '') +
+      '<button type="button" class="icon-btn" data-act="close" aria-label="Tutup"><svg class="i" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></svg></button></div>' +
+      '<div class="tabs" role="tablist"><button type="button" role="tab" data-ntab="unread" aria-selected="' + (notifTab === 'unread') + '">Belum dibaca</button><button type="button" role="tab" data-ntab="all" aria-selected="' + (notifTab === 'all') + '">Semua</button></div>' + items;
+  }
+  function openNotifs() { openId = null; sheetKind = 'notif'; openSheet(notifHTML()); }
+  function paintNotifs() { $('#sheet').innerHTML = notifHTML(); updateBell(); }
+
+  /* Detail owner */
+  function detailHTML(o, mode) {
+    var isSelf = (o.email || '').toLowerCase() === adminEmail;
     var sub = o.sub_status ? ((SUBST[o.sub_status] || o.sub_status) + (o.current_period_end ? ', sampai ' + dateTxt(o.current_period_end) : '')) : '-';
     var statusBtn = o.active
-      ? '<button type="button" class="btn danger" data-act="suspend">Tangguhkan owner</button>'
+      ? '<button type="button" class="btn danger" data-act="suspend"' + (isSelf ? ' disabled' : '') + '>Tangguhkan owner</button>'
       : '<button type="button" class="btn primary" data-act="activate">Aktifkan kembali</button>';
-    var confirmBox = confirmSuspend
-      ? '<div class="confirm"><p>Tangguhkan ' + esc(o.owner_name) + '? Owner dan ' + (o.staff_count || 0) + ' stafnya langsung keluar dan tidak bisa masuk lagi.</p><div class="pair"><button type="button" class="btn" data-act="cancel-suspend">Batal</button><button type="button" class="btn solid-danger" data-act="do-suspend">Ya, tangguhkan</button></div></div>'
-      : statusBtn;
+    var delBtn = '<button type="button" class="btn danger" data-act="del"' + (isSelf ? ' disabled' : '') + '>Hapus owner</button>';
+    var box;
+    if (mode === 'suspend') {
+      box = '<div class="confirm"><p>Tangguhkan ' + esc(o.owner_name) + '? Owner dan ' + (o.staff_count || 0) + ' stafnya langsung keluar dan tidak bisa masuk lagi.</p><div class="pair"><button type="button" class="btn" data-act="cancel-suspend">Batal</button><button type="button" class="btn solid-danger" data-act="do-suspend">Ya, tangguhkan</button></div></div>';
+    } else if (mode === 'delete') {
+      var p = delPreview || {}, key = String(o.email || o.owner_name || '');
+      box = '<div class="confirm"><p>Hapus permanen ' + esc(o.owner_name) + '?</p><ul class="del-list"><li>' + (p.stores || 0) + ' toko</li><li>' + (p.staff || 0) + ' akun staf</li><li>' + (p.orders || 0) + ' pesanan, beserta tagihan, absensi, dan pengaturan toko</li></ul>' +
+        '<p class="hint-line" style="margin:0">Tidak bisa dikembalikan. Kalau hanya ingin menghentikan akses, pilih Tangguhkan saja.</p>' +
+        '<label class="lbl-f" for="delConfirm">Ketik <b style="color:var(--fg)">' + esc(key) + '</b> untuk konfirmasi<input class="input" id="delConfirm" autocomplete="off" autocapitalize="none" spellcheck="false" data-key="' + esc(key.trim().toLowerCase()) + '"></label>' +
+        '<div class="pair"><button type="button" class="btn" data-act="cancel-del">Batal</button><button type="button" class="btn solid-danger" data-act="do-del" disabled>Ya, hapus</button></div></div>';
+    } else box = statusBtn + delBtn;
     var planSel = o.store_id
-      ? '<label class="lbl-f" for="planSel">Paket langganan<select class="select" id="planSel">' + (o.plan_code ? '' : '<option value="" selected disabled>Pilih paket</option>') + plans.map(function (p) { return '<option value="' + esc(p.code) + '"' + (p.code === o.plan_code ? ' selected' : '') + '>' + esc(p.name) + '</option>'; }).join('') + '</select></label>'
+      ? '<label class="lbl-f" for="planSel">Paket langganan<select class="select" id="planSel">' + (o.plan_code ? '' : '<option value="" selected disabled>Pilih paket</option>') + plans.map(function (p2) { return '<option value="' + esc(p2.code) + '"' + (p2.code === o.plan_code ? ' selected' : '') + '>' + esc(p2.name) + '</option>'; }).join('') + '</select></label>'
       : '<p class="hint-line">Owner ini belum membuat toko, jadi paket dan tagihan belum bisa diatur.</p>';
     var tabs = o.store_id
       ? '<div class="tabs" role="tablist"><button type="button" role="tab" data-tab2="bill" aria-selected="' + (detailTab === 'bill') + '">Tagihan</button><button type="button" role="tab" data-tab2="log" aria-selected="' + (detailTab === 'log') + '">Aktivitas</button></div><div id="tabBody">' + tabHTML() + '</div>'
@@ -677,9 +779,9 @@ body { margin: 0; }
       '<div><dt>Terakhir masuk</dt><dd>' + (o.lastDays === null ? 'Belum pernah' : rel(o.lastDays)) + '</dd></div>' +
       '<div><dt>Telepon</dt><dd>' + esc(o.phone || '-') + '</dd></div>' +
       '<div><dt>Langganan</dt><dd>' + esc(sub) + '</dd></div></dl>' +
-      planSel + tabs + '<div class="actions">' + confirmBox + '</div>';
+      planSel + tabs + '<div class="actions">' + box + '</div>';
   }
-  function paintSheet(confirmSuspend) { var o = byId(openId); if (!o) return; $('#sheet').innerHTML = detailHTML(o, !!confirmSuspend); }
+  function paintSheet(mode) { var o = byId(openId); if (!o) return; $('#sheet').innerHTML = detailHTML(o, mode || false); }
   function openSheet(html) {
     lastFocus = document.activeElement; $('#sheet').innerHTML = html; $('#scrim').hidden = false;
     var f = $('#sheet').querySelector('button, select'); if (f) f.focus();
@@ -700,10 +802,10 @@ body { margin: 0; }
     setTimeout(function () { var input = $('#newOwnerName'); if (input) input.focus(); }, 30);
   }
 
-  function closeSheet() { $('#scrim').hidden = true; $('#sheet').innerHTML = ''; openId = null; if (lastFocus && document.contains(lastFocus)) lastFocus.focus(); }
+  function closeSheet() { $('#scrim').hidden = true; $('#sheet').innerHTML = ''; openId = null; delPreview = null; if (lastFocus && document.contains(lastFocus)) lastFocus.focus(); }
   async function openDetail(id) {
     var o = byId(id); if (!o) return;
-    openId = id; detailData = null; detailTab = 'bill';
+    openId = id; detailData = null; detailTab = 'bill'; delPreview = null; sheetKind = 'detail';
     openSheet(detailHTML(o, false));
     if (!o.store_id) return;
     try {
@@ -711,32 +813,58 @@ body { margin: 0; }
       if (openId === id) { detailData = d; var b = $('#tabBody'); if (b) b.innerHTML = tabHTML(); }
     } catch (e) { if (openId === id) { detailData = { invoices: [], activity: [] }; var b2 = $('#tabBody'); if (b2) b2.innerHTML = '<p class="err">' + esc(e.message) + '</p>'; } }
   }
-  async function mutate(fn, okMsg) {
+  async function mutate(fn, okMsg, undoFn) {
     if (busy) return; busy = true;
     try {
       await fn(); await load();
       var o = byId(openId);
       if (o) { detailData = null; paintSheet(false); if (o.store_id) { try { detailData = await api('detail', { store_id: o.store_id }); var b = $('#tabBody'); if (b) b.innerHTML = tabHTML(); } catch (e) { /* abaikan */ } } }
-      toast(okMsg);
-    } catch (e) { toast('Gagal: ' + e.message); paintSheet(false); }
+      toast(okMsg, undoFn ? { label: 'Urungkan', fn: function () { mutate(undoFn, 'Dibatalkan'); } } : null);
+    } catch (e) { toast('Gagal: ' + e.message); if (byId(openId)) paintSheet(false); }
     finally { busy = false; }
   }
 
   document.addEventListener('click', function (e) {
     var t = e.target;
+    if (t.closest('button')) buzz();
+    if (t.closest('#meAv')) { showTab('profile'); return; }
     if (t.closest('#addOwnerBtn')) { openCreateOwner(); return; }
     var row = t.closest('.row'); if (row) { openDetail(row.dataset.id); return; }
     var chip = t.closest('.chip'); if (chip) { state.status = chip.dataset.status; renderTiles(); renderList(); return; }
-    if (t.closest('#bell')) { var n = count(function (o) { return o.status === 'new'; }); toast(n ? n + ' owner baru perlu dicek' : 'Tidak ada owner baru'); return; }
+    if (t.closest('#bell')) { openNotifs(); return; }
     if (t === $('#scrim')) { closeSheet(); return; }
-    var tb = t.closest('[data-tab2]'); if (tb) { detailTab = tb.dataset.tab2; document.querySelectorAll('[data-tab2]').forEach(function (b) { b.setAttribute('aria-selected', String(b === tb)); }); $('#tabBody').innerHTML = tabHTML(); return; }
+    var nt = t.closest('[data-notif]');
+    if (nt) { if (readIds.indexOf(nt.dataset.notif) < 0) { readIds.push(nt.dataset.notif); saveRead(); } updateBell(); var oid = nt.dataset.owner; closeSheet(); if (byId(oid)) openDetail(oid); return; }
+    var nb = t.closest('[data-ntab]'); if (nb) { notifTab = nb.dataset.ntab; paintNotifs(); return; }
+    var tb = t.closest('[data-tab2]'); if (tb) { detailTab = tb.dataset.tab2; document.querySelectorAll('[data-tab2]').forEach(function (x) { x.setAttribute('aria-selected', String(x === tb)); }); $('#tabBody').innerHTML = tabHTML(); return; }
     var b = t.closest('[data-act]'); if (!b || b.disabled) return;
     var act = b.dataset.act, o = byId(openId);
     if (act === 'close') closeSheet();
-    else if (act === 'suspend') paintSheet(true);
-    else if (act === 'cancel-suspend') paintSheet(false);
-    else if (act === 'do-suspend') mutate(function () { return api('set_active', { owner_id: o.owner_id, active: false }); }, o.owner_name + ' ditangguhkan');
-    else if (act === 'activate') mutate(function () { return api('set_active', { owner_id: o.owner_id, active: true }); }, o.owner_name + ' diaktifkan kembali');
+    else if (act === 'read-all') { buildNotifs().forEach(function (n) { if (readIds.indexOf(n.id) < 0) readIds.push(n.id); }); saveRead(); paintNotifs(); toast('Semua notifikasi ditandai dibaca'); }
+    else if (!o) return;
+    else if (act === 'suspend') paintSheet('suspend');
+    else if (act === 'cancel-suspend' || act === 'cancel-del') paintSheet(false);
+    else if (act === 'do-suspend') { setBusy(b, true); mutate(function () { return api('set_active', { owner_id: o.owner_id, active: false }); }, o.owner_name + ' ditangguhkan', function () { return api('set_active', { owner_id: o.owner_id, active: true }); }); }
+    else if (act === 'activate') { setBusy(b, true); mutate(function () { return api('set_active', { owner_id: o.owner_id, active: true }); }, o.owner_name + ' diaktifkan kembali', function () { return api('set_active', { owner_id: o.owner_id, active: false }); }); }
+    else if (act === 'del') {
+      setBusy(b, true);
+      api('delete_preview', { owner_id: o.owner_id }).then(function (p) { delPreview = p; paintSheet('delete'); var i = $('#delConfirm'); if (i) i.focus(); })
+        .catch(function (er) { setBusy(b, false); toast('Gagal: ' + er.message); });
+    }
+    else if (act === 'do-del') {
+      var typed = $('#delConfirm').value, nm = o.owner_name;
+      setBusy(b, true); busy = true;
+      api('delete_owner', { owner_id: o.owner_id, confirm: typed })
+        .then(function () { closeSheet(); return load().then(function () { toast(nm + ' dihapus'); }); })
+        .catch(function (er) { toast('Gagal: ' + er.message); if (byId(openId)) paintSheet('delete'); })
+        .finally(function () { busy = false; });
+    }
+  });
+  document.addEventListener('input', function (e) {
+    if (e.target.id === 'delConfirm') {
+      var ok = e.target.value.trim().toLowerCase() === e.target.dataset.key, btn = document.querySelector('[data-act="do-del"]');
+      if (btn) btn.disabled = !ok;
+    }
   });
   document.addEventListener('submit', async function (e) {
     if (e.target.id !== 'createOwnerForm') return;
@@ -766,8 +894,17 @@ body { margin: 0; }
 
   document.addEventListener('change', function (e) {
     if (e.target.id === 'planSel') {
-      var o = byId(openId), p = e.target.value;
-      mutate(function () { return api('set_plan', { store_id: o.store_id, plan_code: p }); }, 'Paket ' + o.store_name + ' kini ' + (planNames[p] || p));
+      var o = byId(openId), p = e.target.value, prev = o.plan_code;
+      e.target.disabled = true;
+      mutate(function () { return api('set_plan', { store_id: o.store_id, plan_code: p }); }, 'Paket ' + o.store_name + ' kini ' + (planNames[p] || p),
+        prev ? function () { return api('set_plan', { store_id: o.store_id, plan_code: prev }); } : null);
+    }
+    if (e.target.id === 'photoFile' && e.target.files && e.target.files[0]) {
+      var file = e.target.files[0]; e.target.value = '';
+      resizeImage(file).then(function (url) {
+        pendingPhoto = url; $('#profAv').innerHTML = '<img src="' + esc(url) + '" alt="" draggable="false">';
+        $('#photoDel').disabled = false; $('#profErr').hidden = true; toast('Foto siap, tekan Simpan profil');
+      }).catch(function (er) { $('#profErr').textContent = er.message; $('#profErr').hidden = false; });
     }
   });
   document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && !$('#scrim').hidden) closeSheet(); });
@@ -800,11 +937,31 @@ body { margin: 0; }
       st.filter(function (s) { return s[1] > 0; }).map(function (s) { return '<i style="flex:' + s[1] + ';background:var(' + s[2] + ')"></i>'; }).join('') + '</div>' +
       '<ul class="legend">' + st.map(function (s) { return '<li><i style="background:var(' + s[2] + ')"></i>' + s[0] + ' <b class="num">' + s[1] + '</b></li>'; }).join('') + '</ul></section>';
   }
+  function resizeImage(file) {
+    return new Promise(function (res, rej) {
+      var img = new Image(), url = URL.createObjectURL(file);
+      img.onload = function () {
+        var S = 320, c = document.createElement('canvas'); c.width = S; c.height = S;
+        var m = Math.min(img.width, img.height), sx = (img.width - m) / 2, sy = (img.height - m) / 2;
+        c.getContext('2d').drawImage(img, sx, sy, m, m, 0, 0, S, S); URL.revokeObjectURL(url);
+        res(c.toDataURL('image/jpeg', 0.85));
+      };
+      img.onerror = function () { URL.revokeObjectURL(url); rej(new Error('Foto tidak bisa dibaca. Coba foto lain.')); };
+      img.src = url;
+    });
+  }
   function renderProfile() {
     var stores = count(function (o) { return !!o.store_id; });
+    pendingPhoto = undefined;
     $('#view-profile').innerHTML =
-      '<section class="card"><div class="sheet-top"><span class="avatar lg" style="--c:var(--accent)" aria-hidden="true">' + esc(initials(adminEmail.split('@')[0])) + '</span><div class="txt"><h2 style="margin:0;font-size:20px;font-weight:800;overflow-wrap:anywhere">' + esc(adminEmail) + '</h2><div class="em" style="color:var(--muted)">Admin Ordela</div></div></div>' +
-      '<p class="hint-line" style="margin:0">Kamu bisa melihat ' + owners.length + ' owner dan ' + stores + ' toko, mengubah paket, dan menangguhkan owner.</p></section>' +
+      '<section class="card"><div class="sheet-top"><span class="avatar lg" id="profAv" style="--c:var(--accent)" aria-hidden="true">' + meAvatar() + '</span><div class="txt"><h2 style="margin:0;font-size:21px;font-weight:800;overflow-wrap:anywhere">' + esc(profile.name || 'Belum ada nama') + '</h2><div class="em" style="color:var(--muted);overflow-wrap:anywhere">' + esc(adminEmail) + '</div></div></div>' +
+      '<form id="profForm" novalidate style="display:flex;flex-direction:column;gap:14px">' +
+      '<label class="lbl-f" for="profName">Nama tampilan<input class="input" id="profName" maxlength="60" autocomplete="name" placeholder="Nama kamu" value="' + esc(profile.name) + '"></label>' +
+      '<div class="pair"><button type="button" class="btn" id="photoBtn">' + (profile.photo ? 'Ganti foto' : 'Pilih foto') + '</button><button type="button" class="btn" id="photoDel"' + (profile.photo ? '' : ' disabled') + '>Hapus foto</button></div>' +
+      '<input type="file" id="photoFile" accept="image/*" hidden>' +
+      '<p class="err" id="profErr" role="alert" hidden></p>' +
+      '<button type="submit" class="btn primary">Simpan profil</button></form>' +
+      '<p class="hint-line" style="margin:0">Kamu mengelola ' + owners.length + ' owner dan ' + stores + ' toko.</p></section>' +
       '<form class="card" id="pwForm" novalidate><h3>Kata sandi</h3><p class="hint-line" style="margin:0">Buat kata sandi supaya bisa masuk tanpa menunggu email.</p><label class="lbl-f" for="newPw">Kata sandi baru<input class="input" id="newPw" type="password" autocomplete="new-password" placeholder="Minimal 8 karakter"></label><p class="err" id="pwErr" role="alert" hidden></p><button type="submit" class="btn primary">Simpan kata sandi</button></form>' +
       '<button type="button" class="btn" id="logoutBtn">Keluar</button>';
   }
@@ -877,12 +1034,13 @@ body { margin: 0; }
       if (!sess) { showGate(true, '', 'login'); return; }
       adminEmail = (sess.user.email || '').toLowerCase();
       if (recovering) return;
+      try { var mp = await api('me'); profile = { name: mp.name || '', photo: mp.photo || null }; } catch (e) { /* abaikan */ }
       try { await load(); }
       catch (e) {
         showGate(true, e.status === 403 ? adminEmail + ' tidak punya akses admin Ordela.' : 'Data belum bisa dimuat: ' + e.message, 'denied');
         return;
       }
-      $('#meAv').textContent = initials(adminEmail.split('@')[0]);
+      paintMe();
       showGate(false);
     } finally { booting = false; }
   }
@@ -895,52 +1053,81 @@ body { margin: 0; }
     e.preventDefault();
     var em = $('#loginEmail').value.trim().toLowerCase(), pw = $('#loginPw').value;
     if (!em || !pw) { say('#loginMsg', 'Isi email dan kata sandi.', true); return; }
-    $('#loginBtn').disabled = true; say('#loginMsg', 'Masuk...');
+    setBusy($('#loginBtn'), true); say('#loginMsg', 'Masuk...');
     var r = await sb.auth.signInWithPassword({ email: em, password: pw });
-    $('#loginBtn').disabled = false;
+    setBusy($('#loginBtn'), false);
     if (r.error) say('#loginMsg', r.error.message === 'Invalid login credentials' ? 'Email atau kata sandi salah.' : 'Gagal masuk: ' + r.error.message, true);
     else say('#loginMsg', '');
   });
-  $('#magicBtn').addEventListener('click', async function () {
+  $('#magicBtn').addEventListener('click', busyWrap(async function () {
     var em = $('#loginEmail').value.trim().toLowerCase();
     if (!em) { say('#loginMsg', 'Isi email dulu, lalu pilih tautan email.', true); return; }
     say('#loginMsg', 'Mengirim tautan...');
     var er = await sendLink(em);
     say('#loginMsg', er ? 'Gagal mengirim: ' + er.message : 'Cek email ' + em + ' lalu buka tautan masuknya.', !!er);
-  });
-  $('#forgotBtn').addEventListener('click', async function () {
+  }));
+  $('#forgotBtn').addEventListener('click', busyWrap(async function () {
     var em = $('#loginEmail').value.trim().toLowerCase();
     if (!em) { say('#loginMsg', 'Isi email dulu, lalu pilih lupa kata sandi.', true); return; }
     say('#loginMsg', 'Mengirim tautan...');
     var r = await sb.auth.resetPasswordForEmail(em, { redirectTo: location.origin + location.pathname });
     say('#loginMsg', r.error ? 'Gagal mengirim: ' + r.error.message : 'Jika email terdaftar, tautan untuk membuat kata sandi sudah dikirim.', !!r.error);
-  });
+  }));
   $('#resetForm').addEventListener('submit', async function (e) {
     e.preventDefault();
     var pw = $('#resetPw').value, err = $('#resetErr');
     if (pw.length < 8) { err.textContent = 'Kata sandi minimal 8 karakter.'; err.hidden = false; return; }
+    var rb = e.target.querySelector('button[type="submit"]'); setBusy(rb, true);
     var r = await sb.auth.updateUser({ password: pw });
+    setBusy(rb, false);
     if (r.error) { err.textContent = 'Gagal menyimpan: ' + r.error.message; err.hidden = false; return; }
     recovering = false; $('#resetPw').value = ''; err.hidden = true;
     history.replaceState(null, '', location.pathname);
     toast('Kata sandi disimpan'); boot();
   });
   $('#gateOut').addEventListener('click', function () { sb.auth.signOut(); });
-  document.addEventListener('click', function (e) { if (e.target.closest('#logoutBtn')) sb.auth.signOut(); });
+  document.addEventListener('click', function (e) {
+    var lb = e.target.closest('#logoutBtn'); if (lb) { setBusy(lb, true); sb.auth.signOut(); }
+    if (e.target.closest('#photoBtn')) $('#photoFile').click();
+    if (e.target.closest('#photoDel')) { pendingPhoto = null; $('#profAv').innerHTML = esc(initials($('#profName').value || adminEmail.split('@')[0])); $('#photoDel').disabled = true; toast('Foto akan dihapus, tekan Simpan profil'); }
+  });
   document.addEventListener('submit', async function (e) {
-    if (e.target.id !== 'pwForm') return;
+    var id = e.target.id;
+    if (id !== 'pwForm' && id !== 'profForm') return;
     e.preventDefault();
-    var pw = $('#newPw').value, err = $('#pwErr');
-    if (pw.length < 8) { err.textContent = 'Kata sandi minimal 8 karakter.'; err.hidden = false; return; }
-    var r = await sb.auth.updateUser({ password: pw });
-    if (r.error) { err.textContent = 'Gagal menyimpan: ' + r.error.message; err.hidden = false; return; }
-    $('#newPw').value = ''; err.hidden = true; toast('Kata sandi disimpan. Lain kali masuk dengan email dan kata sandi.');
+    var btn = e.target.querySelector('button[type="submit"]');
+    if (id === 'pwForm') {
+      var pw = $('#newPw').value, err = $('#pwErr');
+      if (pw.length < 8) { err.textContent = 'Kata sandi minimal 8 karakter.'; err.hidden = false; return; }
+      setBusy(btn, true);
+      var r = await sb.auth.updateUser({ password: pw });
+      setBusy(btn, false);
+      if (r.error) { err.textContent = 'Gagal menyimpan: ' + r.error.message; err.hidden = false; return; }
+      $('#newPw').value = ''; err.hidden = true; toast('Kata sandi disimpan. Lain kali masuk dengan email dan kata sandi.');
+      return;
+    }
+    var perr = $('#profErr'), payload = { name: $('#profName').value.trim() };
+    if (pendingPhoto !== undefined) payload.photo = pendingPhoto;
+    setBusy(btn, true);
+    try {
+      var p = await api('set_profile', payload);
+      profile = { name: p.name || '', photo: p.photo || null };
+      paintMe(); renderProfile(); toast('Profil disimpan');
+    } catch (er) { setBusy(btn, false); perr.textContent = 'Gagal menyimpan: ' + er.message; perr.hidden = false; }
   });
   sb.auth.onAuthStateChange(function (ev) {
     if (ev === 'PASSWORD_RECOVERY') { recovering = true; showGate(true, 'Buat kata sandi baru untuk akun ini.', 'reset'); return; }
     if (recovering) return;
     if (ev === 'SIGNED_IN' || ev === 'SIGNED_OUT') setTimeout(boot, 0);
   });
+  /* Tanpa zoom dan salin teks, kecuali di kolom isian */
+  function inField(t) { return !!(t && t.closest && t.closest('input, textarea, select')); }
+  ['gesturestart', 'gesturechange', 'gestureend'].forEach(function (n) { document.addEventListener(n, function (e) { e.preventDefault(); }); });
+  document.addEventListener('touchmove', function (e) { if (e.touches && e.touches.length > 1) e.preventDefault(); }, { passive: false });
+  ['copy', 'cut', 'dragstart', 'selectstart', 'contextmenu'].forEach(function (n) { document.addEventListener(n, function (e) { if (!inField(e.target)) e.preventDefault(); }); });
+  document.addEventListener('wheel', function (e) { if (e.ctrlKey) e.preventDefault(); }, { passive: false });
+  document.addEventListener('keydown', function (e) { if ((e.ctrlKey || e.metaKey) && ['+', '-', '=', '0'].indexOf(e.key) > -1) e.preventDefault(); });
+
   boot();
 })();
 </script>
