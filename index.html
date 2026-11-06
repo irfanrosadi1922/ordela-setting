@@ -189,8 +189,9 @@ ul.users { list-style: none; margin: 0; padding: 0; display: flex; flex-directio
   padding: 28px max(16px, env(safe-area-inset-left, 0px)) calc(10px + env(safe-area-inset-bottom, 0px));
   padding-right: max(16px, env(safe-area-inset-right, 0px));
   background: linear-gradient(to bottom, transparent, var(--bg) 46%); }
-.nav { pointer-events: auto; width: 100%; max-width: 960px; margin: 0 auto; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 4px;
-  background: var(--surface); border: 1px solid var(--line); border-radius: 30px; padding: 6px; }
+.nav { pointer-events: auto; width: 100%; max-width: 960px; margin: 0 auto; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 4px;
+  background: color-mix(in srgb, var(--surface) 76%, transparent); border: 1px solid color-mix(in srgb, var(--line) 72%, transparent); border-radius: 30px; padding: 6px;
+  -webkit-backdrop-filter: blur(18px) saturate(145%); backdrop-filter: blur(18px) saturate(145%); box-shadow: 0 8px 28px rgba(0,0,0,.12); }
 .nav button { border: 0; background: transparent; color: var(--muted); display: flex; flex-direction: column; align-items: center; gap: 2px;
   padding: 8px 4px 7px; border-radius: 24px; font-size: 12px; font-weight: 600; }
 .nav button:hover { color: var(--fg); }
@@ -247,7 +248,8 @@ ul.users { list-style: none; margin: 0; padding: 0; display: flex; flex-directio
 .btn[disabled] { opacity: .45; cursor: not-allowed; }
 .pair { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
 .form-stack { display: flex; flex-direction: column; gap: 12px; }
-.list-head #addOwnerBtn { height: 40px; padding: 0 16px; font-size: 13px; white-space: nowrap; }
+.list-head #addOwnerBtn { width: 42px; height: 42px; padding: 0; flex: none; display: grid; place-items: center; border-radius: 50%; }
+.list-head #addOwnerBtn svg { width: 21px; height: 21px; }
 .confirm { background: color-mix(in srgb, var(--crit) 12%, var(--surface-2)); border-radius: 20px; padding: 14px; display: flex; flex-direction: column; gap: 12px; }
 .confirm p { margin: 0; font-weight: 600; }
 .err { color: var(--crit); font-size: 13px; margin: 0; }
@@ -364,7 +366,7 @@ body { margin: 0; }
       <div class="list-head">
         <h2 id="listTitle">Semua owner</h2>
         <span class="num" id="count"></span>
-        <button type="button" class="btn primary" id="addOwnerBtn">+ Tambah User</button>
+        <button type="button" class="btn primary" id="addOwnerBtn" aria-label="Tambah user" title="Tambah user"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></button>
       </div>
       <div class="toolbar">
         <div class="field search">
@@ -385,6 +387,7 @@ body { margin: 0; }
   </div>
 
   <div class="view" id="view-analytics" hidden></div>
+  <div class="view" id="view-subscriptions" hidden></div>
   <div class="view" id="view-profile" hidden></div>
 </div>
 
@@ -392,6 +395,7 @@ body { margin: 0; }
   <nav class="nav" aria-label="Navigasi utama">
     <button type="button" data-tab="home" aria-current="page"><svg class="i" viewBox="0 0 24 24"><path d="M4 11 12 4l8 7v8a1 1 0 0 1-1 1h-4v-6H9v6H5a1 1 0 0 1-1-1z"/></svg><span>Beranda</span></button>
     <button type="button" data-tab="analytics"><svg class="i" viewBox="0 0 24 24"><path d="M12 3a9 9 0 1 0 9 9h-9z"/><path d="M15 3.5A9 9 0 0 1 20.5 9H15z"/></svg><span>Analitik</span></button>
+    <button type="button" data-tab="subscriptions"><svg class="i" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="3"/><path d="M3 10h18M7 15h4"/></svg><span>Langganan</span></button>
     <button type="button" data-tab="profile"><svg class="i" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21c.8-4 4-6 8-6s7.2 2 8 6"/></svg><span>Profil</span></button>
   </nav>
 </div>
@@ -590,7 +594,7 @@ body { margin: 0; }
       '<form id="createOwnerForm" class="form-stack" novalidate>' +
       '<label class="lbl-f" for="newOwnerName">Nama lengkap<input class="input" id="newOwnerName" name="name" maxlength="60" autocomplete="name" placeholder="Nama pemilik akun" required></label>' +
       '<label class="lbl-f" for="newOwnerEmail">Email<input class="input" id="newOwnerEmail" name="email" type="email" maxlength="120" autocomplete="email" placeholder="nama@email.com" required></label>' +
-      '<div class="hint-line">Jabatan akun: <b>Owner</b>. Undangan aktivasi akan dikirim ke email. Akun dibuat tanpa toko atau data transaksi.</div>' +
+      '<div class="hint-line">Jabatan akun: <b>Owner</b>. Undangan aktivasi dikirim ke email. Trial Pro gratis 14 hari mulai otomatis saat Owner membuat toko pertamanya.</div>' +
       '<p class="err" id="createOwnerErr" role="alert" hidden></p>' +
       '<button type="submit" class="btn primary" id="createOwnerSubmit">Buat akun &amp; kirim undangan</button>' +
       '</form>'
@@ -706,12 +710,30 @@ body { margin: 0; }
       '<form class="card" id="pwForm" novalidate><h3>Kata sandi</h3><p class="hint-line" style="margin:0">Buat kata sandi supaya bisa masuk tanpa menunggu email.</p><label class="lbl-f" for="newPw">Kata sandi baru<input class="input" id="newPw" type="password" autocomplete="new-password" placeholder="Minimal 8 karakter"></label><p class="err" id="pwErr" role="alert" hidden></p><button type="submit" class="btn primary">Simpan kata sandi</button></form>' +
       '<button type="button" class="btn" id="logoutBtn">Keluar</button>';
   }
-  var TITLES = { home: 'Owner', analytics: 'Analitik owner', profile: 'Profil' };
+  function renderSubscriptions() {
+    var featureNames = { pos:'POS', menu:'Menu', qr_menu:'QR Menu', qr_ordering:'QR Ordering', receipt_printing:'Cetak struk', transactions:'Transaksi', basic_reports:'Laporan dasar', advanced_reports:'Laporan lanjutan', inventory_advanced:'Inventori lanjutan', staff_attendance:'Absensi staf', supplier_management:'Supplier', loyalty:'Loyalty', promotions:'Promosi', ai_manager:'AI Manager', ai_sales_analysis:'Analisis AI', ai_recommendations:'Rekomendasi AI', multi_outlet:'Multi-outlet', api_integrations:'Integrasi API', audit_log:'Audit log', kds:'Kitchen display', exports:'Ekspor data', priority_support:'Prioritas dukungan', central_dashboard:'Dashboard pusat', advanced_permissions:'Hak akses lanjutan' };
+    var planCards = plans.map(function (p, i) {
+      var used = count(function (o) { return !!o.store_id && o.plan_code === p.code; });
+      var features = Object.keys(p.features || {}).filter(function (k) { return p.features[k] && featureNames[k]; }).slice(0, 6).map(function (k) { return '<li><i style="background:var(--ok)"></i>' + featureNames[k] + '</li>'; }).join('');
+      var lim = p.limits || {};
+      var limitText = 'Staf ' + (lim.staff === -1 ? 'tanpa batas' : (lim.staff == null ? '-' : lim.staff)) + ' · Outlet ' + (lim.outlets === -1 ? 'tanpa batas' : (lim.outlets == null ? '-' : lim.outlets)) + ' · Pesanan/bulan ' + (lim.monthly_orders === -1 ? 'tanpa batas' : (lim.monthly_orders == null ? '-' : Number(lim.monthly_orders).toLocaleString('id-ID')));
+      return '<section class="card"><div class="sheet-top"><div class="txt"><h3>' + esc(p.name) + '</h3><p class="sub">' + esc(p.description || '') + '</p></div><span class="pill">' + used + ' toko</span></div><ul class="legend">' + features + '</ul><p class="hint-line" style="margin:0">' + esc(limitText) + '</p></section>';
+    }).join('');
+    var subs = owners.slice().sort(function(a,b){ return String(a.owner_name).localeCompare(String(b.owner_name),'id'); });
+    var rows = subs.map(function(o){
+      var stateText = o.sub_status ? (SUBST[o.sub_status] || o.sub_status) : (o.store_id ? 'Belum ada langganan' : 'Trial mulai saat toko dibuat');
+      if (o.sub_status === 'trialing' && o.trial_ends_at) stateText += ' · berakhir ' + dateTxt(o.trial_ends_at);
+      return '<li><button type="button" class="row" data-id="' + esc(o.owner_id) + '"><span class="who">' + avatar(o) + '<span class="txt"><span class="nm">' + esc(o.owner_name || 'Tanpa nama') + '</span><span class="em">' + esc(o.store_name || o.email || '-') + '</span></span></span><span class="c-role"><b>' + esc(o.planName || (o.store_id ? 'Belum ada paket' : 'Belum ada toko')) + '</b><small>' + esc(stateText) + '</small></span><span class="chev">' + ICON.chev + '</span></button></li>';
+    }).join('');
+    $('#view-subscriptions').innerHTML = '<section class="hero"><div><h2>Paket &amp; langganan</h2><p>Trial Pro 14 hari untuk setiap toko baru, satu kali saat toko pertama dibuat.</p></div><div class="big">14<br><small style="font-size:12px">hari</small></div></section><div class="grid2">' + planCards + '</div><section><div class="list-head"><h2>Langganan owner</h2><span class="num">' + owners.length + ' akun</span></div><ul class="users">' + (rows || '<li class="empty"><b>Belum ada akun</b>Owner akan tampil di sini.</li>') + '</ul></section>';
+  }
+  var TITLES = { home: 'Owner', analytics: 'Analitik owner', subscriptions: 'Langganan', profile: 'Profil' };
   function showTab(t) {
-    ['home', 'analytics', 'profile'].forEach(function (k) { $('#view-' + k).hidden = k !== t; });
+    ['home', 'analytics', 'subscriptions', 'profile'].forEach(function (k) { $('#view-' + k).hidden = k !== t; });
     document.querySelectorAll('.nav button').forEach(function (b) { if (b.dataset.tab === t) b.setAttribute('aria-current', 'page'); else b.removeAttribute('aria-current'); });
     $('#pageTitle').textContent = TITLES[t];
     if (t === 'analytics') renderAnalytics();
+    if (t === 'subscriptions') renderSubscriptions();
     if (t === 'profile') renderProfile();
     window.scrollTo(0, 0);
   }
