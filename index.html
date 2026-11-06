@@ -246,6 +246,8 @@ ul.users { list-style: none; margin: 0; padding: 0; display: flex; flex-directio
 .btn.solid-danger { background: var(--crit); color: #17181c; }
 .btn[disabled] { opacity: .45; cursor: not-allowed; }
 .pair { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.form-stack { display: flex; flex-direction: column; gap: 12px; }
+.list-head #addOwnerBtn { height: 40px; padding: 0 16px; font-size: 13px; white-space: nowrap; }
 .confirm { background: color-mix(in srgb, var(--crit) 12%, var(--surface-2)); border-radius: 20px; padding: 14px; display: flex; flex-direction: column; gap: 12px; }
 .confirm p { margin: 0; font-weight: 600; }
 .err { color: var(--crit); font-size: 13px; margin: 0; }
@@ -362,6 +364,7 @@ body { margin: 0; }
       <div class="list-head">
         <h2 id="listTitle">Semua owner</h2>
         <span class="num" id="count"></span>
+        <button type="button" class="btn primary" id="addOwnerBtn">+ Tambah User</button>
       </div>
       <div class="toolbar">
         <div class="field search">
@@ -579,6 +582,22 @@ body { margin: 0; }
     lastFocus = document.activeElement; $('#sheet').innerHTML = html; $('#scrim').hidden = false;
     var f = $('#sheet').querySelector('button, select'); if (f) f.focus();
   }
+  function openCreateOwner() {
+    openId = null;
+    openSheet(
+      '<div class="sheet-top"><div class="txt"><h2 id="sheetTitle">Tambah User</h2><div class="em">Buat akun Owner baru untuk Ordela</div></div>' +
+      '<button type="button" class="icon-btn" data-act="close" aria-label="Tutup"><svg class="i" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></svg></button></div>' +
+      '<form id="createOwnerForm" class="form-stack" novalidate>' +
+      '<label class="lbl-f" for="newOwnerName">Nama lengkap<input class="input" id="newOwnerName" name="name" maxlength="60" autocomplete="name" placeholder="Nama pemilik akun" required></label>' +
+      '<label class="lbl-f" for="newOwnerEmail">Email<input class="input" id="newOwnerEmail" name="email" type="email" maxlength="120" autocomplete="email" placeholder="nama@email.com" required></label>' +
+      '<div class="hint-line">Jabatan akun: <b>Owner</b>. Undangan aktivasi akan dikirim ke email. Akun dibuat tanpa toko atau data transaksi.</div>' +
+      '<p class="err" id="createOwnerErr" role="alert" hidden></p>' +
+      '<button type="submit" class="btn primary" id="createOwnerSubmit">Buat akun &amp; kirim undangan</button>' +
+      '</form>'
+    );
+    setTimeout(function () { var input = $('#newOwnerName'); if (input) input.focus(); }, 30);
+  }
+
   function closeSheet() { $('#scrim').hidden = true; $('#sheet').innerHTML = ''; openId = null; if (lastFocus && document.contains(lastFocus)) lastFocus.focus(); }
   async function openDetail(id) {
     var o = byId(id); if (!o) return;
@@ -603,6 +622,7 @@ body { margin: 0; }
 
   document.addEventListener('click', function (e) {
     var t = e.target;
+    if (t.closest('#addOwnerBtn')) { openCreateOwner(); return; }
     var row = t.closest('.row'); if (row) { openDetail(row.dataset.id); return; }
     var chip = t.closest('.chip'); if (chip) { state.status = chip.dataset.status; renderTiles(); renderList(); return; }
     if (t.closest('#bell')) { var n = count(function (o) { return o.status === 'new'; }); toast(n ? n + ' owner baru perlu dicek' : 'Tidak ada owner baru'); return; }
@@ -616,6 +636,31 @@ body { margin: 0; }
     else if (act === 'do-suspend') mutate(function () { return api('set_active', { owner_id: o.owner_id, active: false }); }, o.owner_name + ' ditangguhkan');
     else if (act === 'activate') mutate(function () { return api('set_active', { owner_id: o.owner_id, active: true }); }, o.owner_name + ' diaktifkan kembali');
   });
+  document.addEventListener('submit', async function (e) {
+    if (e.target.id !== 'createOwnerForm') return;
+    e.preventDefault();
+    if (busy) return;
+    var name = $('#newOwnerName').value.trim().replace(/\\s+/g, ' ');
+    var email = $('#newOwnerEmail').value.trim().toLowerCase();
+    var err = $('#createOwnerErr'), btn = $('#createOwnerSubmit');
+    err.hidden = true;
+    if (name.length < 2 || name.length > 60) { err.textContent = 'Nama harus 2-60 karakter.'; err.hidden = false; return; }
+    if (!/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(email) || email.length > 120) { err.textContent = 'Masukkan alamat email yang valid.'; err.hidden = false; return; }
+    busy = true; btn.disabled = true; btn.textContent = 'Membuat akun...';
+    try {
+      await api('create_owner', { name: name, email: email });
+      closeSheet();
+      await load();
+      toast('Undangan Owner dikirim ke ' + email);
+    } catch (error) {
+      err.textContent = error.message || 'Gagal membuat akun Owner.';
+      err.hidden = false;
+    } finally {
+      busy = false;
+      if (btn.isConnected) { btn.disabled = false; btn.textContent = 'Buat akun & kirim undangan'; }
+    }
+  });
+
   document.addEventListener('change', function (e) {
     if (e.target.id === 'planSel') {
       var o = byId(openId), p = e.target.value;
