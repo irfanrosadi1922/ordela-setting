@@ -825,7 +825,7 @@ button.avatar { border: 0; padding: 0; cursor: pointer; }
         return '<label class="plan-card plan-pick plan-' + esc(meta.tone) + '"><input type="radio" name="plan" value="' + esc(p.code) + '"' + (p.code === 'pro' ? ' checked' : '') + '>' +
           '<div class="plan-card-head"><div><span class="plan-eyebrow">' + esc(meta.tag) + '</span><h3>' + esc(p.name) + '</h3></div><span class="plan-count">' + note + '</span></div>' + planBody(p) + '</label>';
       }).join('') + '</div></fieldset>' +
-      '<div class="hint-line">Jabatan akun: <b>Owner</b>. Undangan aktivasi dikirim ke email. Paket berlaku saat Owner membuat toko pertamanya. Paket Pro dimulai dengan trial 14 hari.</div>' +
+      '<div class="hint-line">Jabatan akun: <b>Owner</b>. Undangan dikirim ke email. Owner membuat kata sandi, melengkapi data diri, lalu menyiapkan toko. Paket berlaku saat toko pertama dibuat, dan Pro dimulai dengan trial 14 hari.</div>' +
       '<p class="err" id="createOwnerErr" role="alert" hidden></p>' +
       '<button type="submit" class="btn primary" id="createOwnerSubmit">Buat akun &amp; kirim undangan</button>' +
       '</form>'
