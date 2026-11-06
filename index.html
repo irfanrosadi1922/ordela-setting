@@ -356,7 +356,8 @@ body { margin: 0; }
 .subscription-total { flex:none; padding:5px 10px; border-radius:99px; background:var(--surface-2); color:var(--muted); font-size:12px; font-weight:700; }
 .subscription-table-head { display:grid; grid-template-columns:minmax(0,1.5fr) minmax(0,1fr) minmax(110px,.8fr) 20px; gap:12px; padding:0 15px 2px; color:var(--muted); font-size:9px; font-weight:800; letter-spacing:.09em; }
 .subscription-list { display:flex; flex-direction:column; gap:8px; list-style:none; margin:0; padding:0; }
-.subscription-item { display:grid; grid-template-columns:minmax(0,1.5fr) minmax(0,1fr) minmax(110px,.8fr) 20px; align-items:center; gap:12px; min-width:0; padding:12px 15px; border-radius:19px; background:var(--surface); }
+.subscription-item { width:100%; text-align:left; color:var(--fg); font:inherit; border:0; display:grid; grid-template-columns:minmax(0,1.5fr) minmax(0,1fr) minmax(110px,.8fr) 20px; align-items:center; gap:12px; min-width:0; padding:12px 15px; border-radius:19px; background:var(--surface); cursor:pointer; }
+.subscription-item:hover { background:var(--surface-2); }
 .subscription-person { display:flex; align-items:center; gap:10px; min-width:0; }
 .subscription-person-txt { min-width:0; }
 .subscription-person-txt b,.subscription-person-txt span { display:block; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
@@ -831,7 +832,7 @@ body { margin: 0; }
       var stateText = o.sub_status ? (SUBST[o.sub_status] || o.sub_status) : (o.store_id ? 'Belum ada langganan' : 'Menunggu toko dibuat');
       var detail = isTrial ? 'Sampai ' + dateTxt(o.trial_ends_at) : (o.store_name || o.email || 'Belum ada toko');
       var badgeClass = o.sub_status === 'trialing' ? 'trial' : (o.sub_status === 'expired' || o.sub_status === 'past_due' ? 'ended' : 'normal');
-      return '<li class="subscription-item"><div class="subscription-person">' + avatar(o) + '<div class="subscription-person-txt"><b>' + esc(o.owner_name || 'Tanpa nama') + '</b><span>' + esc(o.store_name || o.email || 'Belum ada toko') + '</span></div></div><div class="subscription-plan"><b>' + esc(o.planName || (o.store_id ? 'Belum ada paket' : 'Belum berlangganan')) + '</b><span class="sub-state ' + badgeClass + '">' + esc(stateText) + '</span></div><div class="subscription-date">' + esc(detail) + '</div><span class="chev">' + ICON.chev + '</span></li>';
+      return '<li><button type="button" class="subscription-item row" data-id="' + esc(o.owner_id) + '" aria-label="Buka langganan ' + esc(o.owner_name || 'owner') + '"><span class="subscription-person">' + avatar(o) + '<span class="subscription-person-txt"><b>' + esc(o.owner_name || 'Tanpa nama') + '</b><span>' + esc(o.store_name || o.email || 'Belum ada toko') + '</span></span></span><span class="subscription-plan"><b>' + esc(o.planName || (o.store_id ? 'Belum ada paket' : 'Belum berlangganan')) + '</b><span class="sub-state ' + badgeClass + '">' + esc(stateText) + '</span></span><span class="subscription-date">' + esc(detail) + '</span><span class="chev">' + ICON.chev + '</span></button></li>';
     }).join('');
     var trialCount = count(function(o){ return o.sub_status === 'trialing'; });
     var activeCount = count(function(o){ return o.sub_status === 'active'; });
