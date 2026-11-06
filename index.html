@@ -260,8 +260,24 @@ ul.users { list-style: none; margin: 0; padding: 0; display: flex; flex-directio
 @media (prefers-reduced-motion: reduce) { .toast, .hero .big .v { transition: none; } }
 [hidden] { display: none !important; }
 body { margin: 0; }
-.gate { max-width: 420px; margin: 10vh auto 0; }
-.gate .card { gap: 16px; }
+:root { --mint: #c9e7cf; --on-mint: #16251b; }
+.gate { max-width: 440px; margin: 0 auto; padding-top: 3vh; display: flex; flex-direction: column; gap: 14px; }
+.login-hero { position: relative; overflow: hidden; background: var(--mint); color: var(--on-mint); border-radius: 32px; padding: 26px 24px 30px; min-height: 250px; display: flex; flex-direction: column; gap: 12px; }
+.login-hero .brand { font-weight: 800; font-size: 15px; letter-spacing: .08em; text-transform: uppercase; }
+.login-hero h1 { margin: 0; font-size: 36px; line-height: 1.08; font-weight: 500; letter-spacing: -.015em; text-wrap: balance; position: relative; z-index: 1; }
+.login-hero h1 b { font-weight: 800; }
+.login-hero p { margin: 0; max-width: 21ch; font-size: 14.5px; line-height: 1.45; opacity: .82; position: relative; z-index: 1; }
+.login-hero svg { position: absolute; right: -34px; bottom: -52px; width: 140px; height: 140px; }
+.login-card { background: var(--surface); border-radius: 28px; padding: 22px; display: flex; flex-direction: column; gap: 14px; }
+.login-card form { display: flex; flex-direction: column; gap: 14px; }
+.pw { position: relative; }
+.pw .input { padding-right: 76px; }
+.pw button { position: absolute; right: 6px; top: 50%; translate: 0 -50%; height: 34px; padding: 0 12px; border: 0; border-radius: 99px; background: var(--surface); color: var(--muted); font-weight: 600; font-size: 13px; }
+.pw button:hover { color: var(--fg); }
+.login-alt { display: flex; flex-direction: column; gap: 4px; align-items: stretch; }
+.linkbtn { border: 0; background: transparent; color: var(--fg); font-weight: 600; font-size: 14px; height: 42px; border-radius: 99px; text-decoration: underline; text-decoration-color: var(--line); text-underline-offset: 4px; }
+.linkbtn:hover { background: var(--surface-2); }
+.gate-msg { margin: 0; font-weight: 600; }
 
 .pill.new { --c: var(--info); }
 .chip { padding-inline: 2px; }
@@ -286,13 +302,28 @@ body { margin: 0; }
 <body>
 
 <main class="gate" id="gate" hidden>
-  <section class="card">
-    <h1 style="margin:0;font-size:26px;font-weight:800">Masuk ke Ordela Admin</h1>
-    <p class="sub" id="gateSub" style="margin:0">Kami kirim tautan masuk ke email admin Ordela.</p>
-    <form id="loginForm" style="display:flex;flex-direction:column;gap:14px">
-      <label class="lbl-f" for="loginEmail">Email<input class="input" id="loginEmail" type="email" required autocomplete="email" placeholder="nama@email.com"></label>
-      <p class="hint-line" id="loginMsg" role="status"></p>
-      <button type="submit" class="btn primary">Kirim tautan masuk</button>
+  <section class="login-hero">
+    <span class="brand">Ordela</span>
+    <h1>Halo lagi,<br><b>admin Ordela</b></h1>
+    <p>Masuk untuk mengelola owner, toko, dan paket langganan.</p>
+    <svg viewBox="0 0 200 200" aria-hidden="true"><circle cx="100" cy="100" r="96" fill="#1e2128"/><g stroke="#c9e7cf" stroke-width="12" stroke-linecap="round" fill="none"><path d="M100 100 100 22M100 100 32 140M100 100 168 140"/><circle cx="100" cy="100" r="64"/></g></svg>
+  </section>
+  <section class="login-card">
+    <p class="gate-msg" id="gateMsg" role="status" hidden></p>
+    <form id="loginForm" novalidate>
+      <label class="lbl-f" for="loginEmail">Email<input class="input" id="loginEmail" type="email" autocomplete="username" placeholder="nama@email.com"></label>
+      <label class="lbl-f" for="loginPw">Kata sandi<span class="pw"><input class="input" id="loginPw" type="password" autocomplete="current-password" placeholder="Kata sandi"><button type="button" id="pwToggle" aria-label="Tampilkan kata sandi">Lihat</button></span></label>
+      <p class="hint-line" id="loginMsg" role="status" style="margin:0"></p>
+      <button type="submit" class="btn primary" id="loginBtn">Masuk</button>
+    </form>
+    <div class="login-alt" id="loginAlt">
+      <button type="button" class="linkbtn" id="magicBtn">Masuk lewat tautan email</button>
+      <button type="button" class="linkbtn" id="forgotBtn">Lupa atau belum punya kata sandi?</button>
+    </div>
+    <form id="resetForm" hidden novalidate>
+      <label class="lbl-f" for="resetPw">Kata sandi baru<input class="input" id="resetPw" type="password" autocomplete="new-password" placeholder="Minimal 8 karakter"></label>
+      <p class="err" id="resetErr" role="alert" hidden></p>
+      <button type="submit" class="btn primary">Simpan dan masuk</button>
     </form>
     <button type="button" class="btn" id="gateOut" hidden>Keluar</button>
   </section>
@@ -626,6 +657,7 @@ body { margin: 0; }
     $('#view-profile').innerHTML =
       '<section class="card"><div class="sheet-top"><span class="avatar lg" style="--c:var(--accent)" aria-hidden="true">' + esc(initials(adminEmail.split('@')[0])) + '</span><div class="txt"><h2 style="margin:0;font-size:20px;font-weight:800;overflow-wrap:anywhere">' + esc(adminEmail) + '</h2><div class="em" style="color:var(--muted)">Admin Ordela</div></div></div>' +
       '<p class="hint-line" style="margin:0">Kamu bisa melihat ' + owners.length + ' owner dan ' + stores + ' toko, mengubah paket, dan menangguhkan owner.</p></section>' +
+      '<form class="card" id="pwForm" novalidate><h3>Kata sandi</h3><p class="hint-line" style="margin:0">Buat kata sandi supaya bisa masuk tanpa menunggu email.</p><label class="lbl-f" for="newPw">Kata sandi baru<input class="input" id="newPw" type="password" autocomplete="new-password" placeholder="Minimal 8 karakter"></label><p class="err" id="pwErr" role="alert" hidden></p><button type="submit" class="btn primary">Simpan kata sandi</button></form>' +
       '<button type="button" class="btn" id="logoutBtn">Keluar</button>';
   }
   var TITLES = { home: 'Owner', analytics: 'Analitik owner', profile: 'Profil' };
@@ -640,41 +672,91 @@ body { margin: 0; }
   document.querySelector('.nav').addEventListener('click', function (e) { var b = e.target.closest('button[data-tab]'); if (b) showTab(b.dataset.tab); });
 
   /* Masuk */
-  function showGate(on, sub, signedIn) {
+  function showGate(on, msg, mode) {
     $('#gate').hidden = !on; $('#appRoot').hidden = on; $('#dock').hidden = on;
-    if (sub) $('#gateSub').textContent = sub;
-    $('#gateOut').hidden = !signedIn; $('#loginForm').hidden = !!signedIn;
+    if (!on) return;
+    mode = mode || 'login';
+    $('#loginForm').hidden = mode !== 'login'; $('#loginAlt').hidden = mode !== 'login';
+    $('#resetForm').hidden = mode !== 'reset'; $('#gateOut').hidden = mode !== 'denied';
+    $('#gateMsg').textContent = msg || ''; $('#gateMsg').hidden = !msg;
   }
   async function sendLink(email) {
     var r = await sb.auth.signInWithOtp({ email: email, options: { emailRedirectTo: location.origin + location.pathname, shouldCreateUser: false } });
     return r.error;
   }
   var booting = false;
+  var recovering = location.hash.indexOf('type=recovery') > -1;
   async function boot() {
     if (booting) return; booting = true;
     try {
       var sess = (await sb.auth.getSession()).data.session;
-      if (!sess) { showGate(true, 'Kami kirim tautan masuk ke email admin Ordela.', false); return; }
+      if (!sess) { showGate(true, '', 'login'); return; }
       adminEmail = (sess.user.email || '').toLowerCase();
+      if (recovering) return;
       try { await load(); }
       catch (e) {
-        showGate(true, e.status === 403 ? adminEmail + ' tidak punya akses admin Ordela.' : 'Data belum bisa dimuat: ' + e.message, true);
+        showGate(true, e.status === 403 ? adminEmail + ' tidak punya akses admin Ordela.' : 'Data belum bisa dimuat: ' + e.message, 'denied');
         return;
       }
       $('#meAv').textContent = initials(adminEmail.split('@')[0]);
       showGate(false);
     } finally { booting = false; }
   }
+  function say(id, text, bad) { var el = $(id); el.textContent = text; el.style.color = bad ? 'var(--crit)' : ''; }
+  $('#pwToggle').addEventListener('click', function () {
+    var i = $('#loginPw'), show = i.type === 'password'; i.type = show ? 'text' : 'password';
+    this.textContent = show ? 'Sembunyi' : 'Lihat'; this.setAttribute('aria-label', show ? 'Sembunyikan kata sandi' : 'Tampilkan kata sandi');
+  });
   $('#loginForm').addEventListener('submit', async function (e) {
     e.preventDefault();
-    var em = $('#loginEmail').value.trim().toLowerCase(), msg = $('#loginMsg');
-    msg.textContent = 'Mengirim tautan...';
+    var em = $('#loginEmail').value.trim().toLowerCase(), pw = $('#loginPw').value;
+    if (!em || !pw) { say('#loginMsg', 'Isi email dan kata sandi.', true); return; }
+    $('#loginBtn').disabled = true; say('#loginMsg', 'Masuk...');
+    var r = await sb.auth.signInWithPassword({ email: em, password: pw });
+    $('#loginBtn').disabled = false;
+    if (r.error) say('#loginMsg', r.error.message === 'Invalid login credentials' ? 'Email atau kata sandi salah.' : 'Gagal masuk: ' + r.error.message, true);
+    else say('#loginMsg', '');
+  });
+  $('#magicBtn').addEventListener('click', async function () {
+    var em = $('#loginEmail').value.trim().toLowerCase();
+    if (!em) { say('#loginMsg', 'Isi email dulu, lalu pilih tautan email.', true); return; }
+    say('#loginMsg', 'Mengirim tautan...');
     var er = await sendLink(em);
-    msg.textContent = er ? 'Gagal mengirim: ' + er.message : 'Cek email ' + em + ' lalu buka tautan masuknya.';
+    say('#loginMsg', er ? 'Gagal mengirim: ' + er.message : 'Cek email ' + em + ' lalu buka tautan masuknya.', !!er);
+  });
+  $('#forgotBtn').addEventListener('click', async function () {
+    var em = $('#loginEmail').value.trim().toLowerCase();
+    if (!em) { say('#loginMsg', 'Isi email dulu, lalu pilih lupa kata sandi.', true); return; }
+    say('#loginMsg', 'Mengirim tautan...');
+    var r = await sb.auth.resetPasswordForEmail(em, { redirectTo: location.origin + location.pathname });
+    say('#loginMsg', r.error ? 'Gagal mengirim: ' + r.error.message : 'Jika email terdaftar, tautan untuk membuat kata sandi sudah dikirim.', !!r.error);
+  });
+  $('#resetForm').addEventListener('submit', async function (e) {
+    e.preventDefault();
+    var pw = $('#resetPw').value, err = $('#resetErr');
+    if (pw.length < 8) { err.textContent = 'Kata sandi minimal 8 karakter.'; err.hidden = false; return; }
+    var r = await sb.auth.updateUser({ password: pw });
+    if (r.error) { err.textContent = 'Gagal menyimpan: ' + r.error.message; err.hidden = false; return; }
+    recovering = false; $('#resetPw').value = ''; err.hidden = true;
+    history.replaceState(null, '', location.pathname);
+    toast('Kata sandi disimpan'); boot();
   });
   $('#gateOut').addEventListener('click', function () { sb.auth.signOut(); });
   document.addEventListener('click', function (e) { if (e.target.closest('#logoutBtn')) sb.auth.signOut(); });
-  sb.auth.onAuthStateChange(function (ev) { if (ev === 'SIGNED_IN' || ev === 'SIGNED_OUT') setTimeout(boot, 0); });
+  document.addEventListener('submit', async function (e) {
+    if (e.target.id !== 'pwForm') return;
+    e.preventDefault();
+    var pw = $('#newPw').value, err = $('#pwErr');
+    if (pw.length < 8) { err.textContent = 'Kata sandi minimal 8 karakter.'; err.hidden = false; return; }
+    var r = await sb.auth.updateUser({ password: pw });
+    if (r.error) { err.textContent = 'Gagal menyimpan: ' + r.error.message; err.hidden = false; return; }
+    $('#newPw').value = ''; err.hidden = true; toast('Kata sandi disimpan. Lain kali masuk dengan email dan kata sandi.');
+  });
+  sb.auth.onAuthStateChange(function (ev) {
+    if (ev === 'PASSWORD_RECOVERY') { recovering = true; showGate(true, 'Buat kata sandi baru untuk akun ini.', 'reset'); return; }
+    if (recovering) return;
+    if (ev === 'SIGNED_IN' || ev === 'SIGNED_OUT') setTimeout(boot, 0);
+  });
   boot();
 })();
 </script>
