@@ -650,8 +650,9 @@ body { margin: 0; }
     try {
       await api('create_owner', { name: name, email: email });
       closeSheet();
-      await load();
       toast('Undangan Owner dikirim ke ' + email);
+      try { await load(); }
+      catch (loadError) { toast('Akun dibuat, tetapi daftar belum diperbarui. Muat ulang halaman.'); }
     } catch (error) {
       err.textContent = error.message || 'Gagal membuat akun Owner.';
       err.hidden = false;
