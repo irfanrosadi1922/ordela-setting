@@ -7,6 +7,7 @@ Halaman admin Ordela untuk mengelola **owner** (pelanggan Ordela): `index.html`,
 - Daftar owner dengan toko, paket, dan status (Baru, Aktif, Ditangguhkan), plus pencarian dan filter paket.
 - Detail owner: info toko, jumlah staf, langganan, tagihan, dan riwayat aktivitas.
 - Ubah paket langganan toko (Starter, Pro, Business, Enterprise, Legacy).
+- Tambah owner baru lewat undangan email, dengan memilih paket langganan (kartu paket sama dengan tab Langganan). Paket disimpan di `billing.pending_plans` dan dipakai trigger `billing.add_default_subscription()` saat owner membuat toko pertama: Pro mulai dengan trial 14 hari, paket lain langsung aktif.
 - Tangguhkan atau aktifkan owner. Penangguhan juga mengeluarkan sesi owner dan stafnya, lalu menandai langganan `suspended`.
 - Analitik ringkas: owner per paket, pendaftaran per bulan, sebaran status.
 - Hapus owner secara permanen (toko, staf, pesanan, tagihan, dan akun login ikut terhapus). Wajib mengetik email owner untuk konfirmasi, dan akunmu sendiri tidak bisa dihapus.
