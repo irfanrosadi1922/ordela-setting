@@ -870,12 +870,12 @@ button.avatar { border: 0; padding: 0; cursor: pointer; }
     if (e.target.id !== 'createOwnerForm') return;
     e.preventDefault();
     if (busy) return;
-    var name = $('#newOwnerName').value.trim().replace(/\\s+/g, ' ');
+    var name = $('#newOwnerName').value.trim().replace(/\s+/g, ' ');
     var email = $('#newOwnerEmail').value.trim().toLowerCase();
     var err = $('#createOwnerErr'), btn = $('#createOwnerSubmit');
     err.hidden = true;
     if (name.length < 2 || name.length > 60) { err.textContent = 'Nama harus 2-60 karakter.'; err.hidden = false; return; }
-    if (!/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(email) || email.length > 120) { err.textContent = 'Masukkan alamat email yang valid.'; err.hidden = false; return; }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || email.length > 120) { err.textContent = 'Masukkan alamat email yang valid.'; err.hidden = false; return; }
     busy = true; btn.disabled = true; btn.textContent = 'Membuat akun...';
     try {
       await api('create_owner', { name: name, email: email });
