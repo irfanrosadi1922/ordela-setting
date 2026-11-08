@@ -569,13 +569,13 @@ button.avatar { border: 0; padding: 0; cursor: pointer; }
   var PAID = ['pro', 'business', 'enterprise'];
   var TONES = ['--info', '--violet', '--ok', '--warn', '--crit'];
   var SUBST = { active: 'Aktif', trialing: 'Uji coba', past_due: 'Menunggak', cancelled: 'Dibatalkan', expired: 'Kedaluwarsa', grandfathered: 'Legacy (dilindungi)', suspended: 'Ditangguhkan' };
-  var ACTION_LABEL = { plan_changed: 'Paket diubah', owner_suspended: 'Owner ditangguhkan', owner_activated: 'Owner diaktifkan' };
+  var ACTION_LABEL = { upgrade_requested: 'Mengajukan upgrade paket', plan_changed: 'Paket diubah', owner_suspended: 'Owner ditangguhkan', owner_activated: 'Owner diaktifkan' };
 
   var SB_URL = 'https://txnpqiiwdtgtfgkrquty.supabase.co';
   var SB_KEY = 'sb_publishable_e1IZBxl3Menz3-N4ehFXkA_rxNLM7t8';
   var sb = window.supabase.createClient(SB_URL, SB_KEY);
 
-  var owners = [], plans = [], planNames = {};
+  var owners = [], plans = [], planNames = {}, requests = [];
   var adminEmail = '';
   var profile = { name: '', photo: null }, pendingPhoto, delPreview = null, notifTab = 'unread', sheetKind = 'detail', readIds = [];
   try { readIds = JSON.parse(localStorage.getItem('ordela_notif_read') || '[]'); } catch (e) { readIds = []; }
@@ -643,6 +643,7 @@ button.avatar { border: 0; padding: 0; cursor: pointer; }
     plans = d.plans || []; planNames = {};
     plans.forEach(function (p) { planNames[p.code] = p.name; });
     owners = d.owners.map(norm);
+    try { requests = ((await api('requests')).requests || []).map(function (r) { r.days = daysAgo(r.created_at); return r; }); } catch (e) { requests = []; }
     var sel = $('#planFilter'), keep = sel.value;
     sel.innerHTML = '<option value="all">Semua paket</option>' + plans.map(function (p) { return '<option value="' + esc(p.code) + '">' + esc(p.name) + '</option>'; }).join('') + '<option value="none">Belum ada paket</option>';
     sel.value = Array.prototype.some.call(sel.options, function (o) { return o.value === keep; }) ? keep : 'all';
@@ -726,6 +727,10 @@ button.avatar { border: 0; padding: 0; cursor: pointer; }
   /* Notifikasi */
   function buildNotifs() {
     var out = [];
+    requests.forEach(function (r) {
+      var nm = r.owner_name || 'Owner', pn = planNames[r.plan] || r.plan;
+      out.push({ id: 'req:' + r.id, req: r.id, owner: r.owner_id, tone: r.handled ? '--ok' : '--warn', title: nm + (r.handled ? ' · upgrade ke ' : ' mengajukan upgrade ke ') + pn, sub: (r.store_name || '-') + (r.handled ? ' · sudah diproses' : ' · menunggu persetujuan'), days: r.days || 0, pri: r.handled ? 0 : 1 });
+    });
     owners.forEach(function (o) {
       var nm = o.owner_name || 'Owner';
       if (!o.active) { out.push({ id: 'susp:' + o.owner_id, owner: o.owner_id, tone: '--crit', title: nm + ' ditangguhkan', sub: 'Owner dan stafnya tidak bisa masuk', days: o.lastDays === null ? 0 : o.lastDays }); return; }
@@ -733,10 +738,10 @@ button.avatar { border: 0; padding: 0; cursor: pointer; }
       if (!o.store_id && o.joinedDays !== null && o.joinedDays >= 1) out.push({ id: 'nostore:' + o.owner_id, owner: o.owner_id, tone: '--warn', title: nm + ' belum punya toko', sub: 'Daftar ' + rel(o.joinedDays).toLowerCase() + ', perlu dibantu memulai', days: o.joinedDays });
       if (o.lastDays !== null && o.lastDays >= 14) out.push({ id: 'idle:' + o.owner_id + ':' + Math.floor(o.lastDays / 7), owner: o.owner_id, tone: '--info', title: nm + ' lama tidak masuk', sub: 'Terakhir masuk ' + rel(o.lastDays).toLowerCase(), days: o.lastDays });
     });
-    out.sort(function (x, y) { return x.days - y.days; });
+    out.sort(function (x, y) { return (y.pri || 0) - (x.pri || 0) || x.days - y.days; });
     return out;
   }
-  function isUnread(n) { return readIds.indexOf(n.id) < 0; }
+  function isUnread(n) { return readIds.indexOf(n.id) < 0 && !(n.req && n.pri === 0); }
   function updateBell() {
     var n = buildNotifs().filter(isUnread).length, bd = $('#bellDot');
     bd.hidden = n === 0; bd.textContent = n > 9 ? '9+' : String(n);
@@ -747,7 +752,7 @@ button.avatar { border: 0; padding: 0; cursor: pointer; }
     var items = list.length
       ? '<ul class="notifs">' + list.map(function (n) {
           var u = isUnread(n);
-          return '<li><button type="button" class="notif' + (u ? ' unread' : '') + '" data-notif="' + esc(n.id) + '" data-owner="' + esc(n.owner) + '"><span class="nico" style="--c:var(' + n.tone + ')"></span><span class="ntxt"><b>' + esc(n.title) + '</b><small>' + esc(n.sub) + '</small></span><span class="ntime">' + (u ? '<i class="udot"></i>' : '') + '<span>' + esc(rel(n.days)) + '</span></span></button></li>';
+          return '<li><button type="button" class="notif' + (u ? ' unread' : '') + '" data-notif="' + esc(n.id) + '" data-owner="' + esc(n.owner) + '"' + (n.req ? ' data-req="' + esc(n.req) + '"' : '') + '><span class="nico" style="--c:var(' + n.tone + ')"></span><span class="ntxt"><b>' + esc(n.title) + '</b><small>' + esc(n.sub) + '</small></span><span class="ntime">' + (u ? '<i class="udot"></i>' : '') + '<span>' + esc(rel(n.days)) + '</span></span></button></li>';
         }).join('') + '</ul>'
       : '<p class="hint-line empty-note">' + (notifTab === 'unread' ? 'Semua notifikasi sudah dibaca.' : 'Belum ada notifikasi.') + '</p>';
     return '<div class="sheet-top"><div class="txt"><h2 id="sheetTitle">Notifikasi</h2><div class="em">' + (un.length ? un.length + ' belum dibaca' : 'Tidak ada yang baru') + '</div></div>' +
@@ -757,6 +762,37 @@ button.avatar { border: 0; padding: 0; cursor: pointer; }
   }
   function openNotifs() { openId = null; sheetKind = 'notif'; openSheet(notifHTML()); }
   function paintNotifs() { $('#sheet').innerHTML = notifHTML(); updateBell(); }
+
+  /* Detail pengajuan upgrade */
+  function reqById(id) { return requests.filter(function (r) { return r.id === id; })[0]; }
+  function timeTxt(ts) { return ts ? new Date(ts).toLocaleString('id-ID', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '-'; }
+  function requestHTML(r) {
+    var pn = planNames[r.plan] || r.plan, fn = r.from_plan ? (planNames[r.from_plan] || r.from_plan) : '-', cn = r.cur_plan ? (planNames[r.cur_plan] || r.cur_plan) : '-';
+    var iv = r.billing_interval === 'yearly' ? 'Tahunan' : 'Bulanan';
+    var price = r.amount_minor ? money(r.amount_minor, r.currency) + (r.billing_interval === 'yearly' ? ' / tahun' : ' / bulan') : '-';
+    var o = r.owner_id ? byId(r.owner_id) : null;
+    var done = r.handled || r.cur_plan === r.plan;
+    var act = done
+      ? '<p class="hint-line">Pengajuan ini sudah diproses. Paket toko saat ini <b>' + esc(cn) + '</b>.</p>'
+      : '<button type="button" class="btn primary" data-act="req-approve" data-req="' + esc(r.id) + '">Setujui, ubah ke ' + esc(pn) + '</button>';
+    return '<div class="sheet-top"><div class="txt"><h2 id="sheetTitle">Pengajuan upgrade</h2><div class="em">' + esc(timeTxt(r.created_at)) + '</div><div style="margin-top:6px"><span class="pill ' + (done ? 'active' : 'new') + '">' + (done ? 'Sudah diproses' : 'Menunggu') + '</span></div></div>' +
+      '<button type="button" class="icon-btn" data-act="close" aria-label="Tutup"><svg class="i" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></svg></button></div>' +
+      '<dl class="info"><div><dt>Owner</dt><dd>' + esc(r.owner_name || '-') + '</dd></div>' +
+      '<div><dt>Email</dt><dd>' + esc(r.email || '-') + '</dd></div>' +
+      '<div><dt>Telepon</dt><dd>' + esc(r.phone || '-') + '</dd></div>' +
+      '<div><dt>Toko</dt><dd>' + esc(r.store_name || '-') + (r.store_code ? ' <span style="color:var(--muted);font-weight:500">(' + esc(r.store_code) + ')</span>' : '') + '</dd></div>' +
+      '<div><dt>Paket saat mengajukan</dt><dd>' + esc(fn) + '</dd></div>' +
+      '<div><dt>Paket diminta</dt><dd>' + esc(pn) + '</dd></div>' +
+      '<div><dt>Periode</dt><dd>' + esc(iv) + '</dd></div>' +
+      '<div><dt>Harga</dt><dd>' + esc(price) + '</dd></div>' +
+      '<div><dt>Paket sekarang</dt><dd>' + esc(cn) + (r.sub_status ? ' <span style="color:var(--muted);font-weight:500">(' + esc(SUBST[r.sub_status] || r.sub_status) + ')</span>' : '') + '</dd></div></dl>' +
+      '<div class="actions">' + act + (o ? '<button type="button" class="btn" data-act="req-owner" data-owner="' + esc(o.owner_id) + '">Buka detail owner</button>' : '') + '</div>';
+  }
+  function openRequest(id) {
+    var r = reqById(id); if (!r) return;
+    if (readIds.indexOf('req:' + id) < 0) { readIds.push('req:' + id); saveRead(); }
+    updateBell(); openId = null; sheetKind = 'request'; openSheet(requestHTML(r));
+  }
 
   /* Detail owner */
   function detailHTML(o, mode) {
@@ -866,12 +902,22 @@ button.avatar { border: 0; padding: 0; cursor: pointer; }
     if (t.closest('#bell')) { openNotifs(); return; }
     if (t === $('#scrim')) { closeSheet(); return; }
     var nt = t.closest('[data-notif]');
-    if (nt) { if (readIds.indexOf(nt.dataset.notif) < 0) { readIds.push(nt.dataset.notif); saveRead(); } updateBell(); var oid = nt.dataset.owner; closeSheet(); if (byId(oid)) openDetail(oid); return; }
+    if (nt) { if (readIds.indexOf(nt.dataset.notif) < 0) { readIds.push(nt.dataset.notif); saveRead(); } updateBell(); var oid = nt.dataset.owner; if (nt.dataset.req) { openRequest(nt.dataset.req); return; } closeSheet(); if (byId(oid)) openDetail(oid); return; }
     var nb = t.closest('[data-ntab]'); if (nb) { notifTab = nb.dataset.ntab; paintNotifs(); return; }
     var tb = t.closest('[data-tab2]'); if (tb) { detailTab = tb.dataset.tab2; document.querySelectorAll('[data-tab2]').forEach(function (x) { x.setAttribute('aria-selected', String(x === tb)); }); $('#tabBody').innerHTML = tabHTML(); return; }
     var b = t.closest('[data-act]'); if (!b || b.disabled) return;
     var act = b.dataset.act, o = byId(openId);
     if (act === 'close') closeSheet();
+    else if (act === 'req-owner') { var oid2 = b.dataset.owner; closeSheet(); if (byId(oid2)) openDetail(oid2); }
+    else if (act === 'req-approve') {
+      var rq = reqById(b.dataset.req); if (!rq || busy) return;
+      busy = true; setBusy(b, true);
+      api('set_plan', { store_id: rq.store_id, plan_code: rq.plan })
+        .then(function () { return load(); })
+        .then(function () { var r2 = reqById(rq.id); if (r2) $('#sheet').innerHTML = requestHTML(r2); updateBell(); toast('Paket ' + (rq.store_name || 'toko') + ' kini ' + (planNames[rq.plan] || rq.plan)); })
+        .catch(function (er) { setBusy(b, false); toast('Gagal: ' + er.message); })
+        .finally(function () { busy = false; });
+    }
     else if (act === 'read-all') { buildNotifs().forEach(function (n) { if (readIds.indexOf(n.id) < 0) readIds.push(n.id); }); saveRead(); paintNotifs(); toast('Semua notifikasi ditandai dibaca'); }
     else if (!o) return;
     else if (act === 'suspend') paintSheet('suspend');
