@@ -449,6 +449,23 @@ button.avatar { border: 0; padding: 0; cursor: pointer; }
 .toast { display: flex; align-items: center; justify-content: center; }
 .toast.act { pointer-events: auto; }
 .toast button { margin-left: 14px; border: 0; background: transparent; color: var(--bg); font-weight: 800; text-decoration: underline; text-underline-offset: 3px; padding: 6px 2px; }
+
+/* profil */
+.avatar.xl { width: 92px; height: 92px; font-size: 32px; box-shadow: 0 0 0 4px var(--surface), 0 0 0 6px color-mix(in srgb, var(--accent) 55%, transparent); }
+.prof-card { gap: 18px; }
+.prof-head { display: flex; flex-direction: column; align-items: center; text-align: center; gap: 4px; padding-top: 6px; }
+.prof-head .avatar { margin-bottom: 10px; }
+.prof-name { margin: 0; font-size: 22px; font-weight: 800; line-height: 1.2; overflow-wrap: anywhere; }
+.prof-mail { color: var(--muted); font-size: 13.5px; overflow-wrap: anywhere; }
+.prof-photo { display: flex; gap: 8px; margin-top: 12px; flex-wrap: wrap; justify-content: center; }
+.chip-btn { height: 34px; padding: 0 14px; border: 0; border-radius: 99px; background: var(--surface-2); color: var(--fg); font-size: 13px; font-weight: 600; }
+.chip-btn:hover { filter: brightness(1.12); }
+.chip-btn[disabled] { opacity: .4; cursor: not-allowed; }
+.prof-stats { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.prof-stats > div { background: var(--surface-2); border-radius: 18px; padding: 12px 14px; display: flex; flex-direction: column; align-items: center; gap: 2px; }
+.prof-stats b { font-size: 22px; font-weight: 800; line-height: 1.1; }
+.prof-stats span { color: var(--muted); font-size: 12.5px; font-weight: 600; }
+#view-profile.view { gap: 14px; }
 </style>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
 </head>
@@ -1035,16 +1052,22 @@ button.avatar { border: 0; padding: 0; cursor: pointer; }
     var stores = count(function (o) { return !!o.store_id; });
     pendingPhoto = undefined;
     $('#view-profile').innerHTML =
-      '<section class="card"><div class="sheet-top"><span class="avatar lg" id="profAv" style="--c:var(--accent)" aria-hidden="true">' + meAvatar() + '</span><div class="txt"><h2 style="margin:0;font-size:21px;font-weight:800;overflow-wrap:anywhere">' + esc(profile.name || 'Belum ada nama') + '</h2><div class="em" style="color:var(--muted);overflow-wrap:anywhere">' + esc(adminEmail) + '</div></div></div>' +
-      '<form id="profForm" novalidate style="display:flex;flex-direction:column;gap:14px">' +
-      '<label class="lbl-f" for="profName">Nama tampilan<input class="input" id="profName" maxlength="60" autocomplete="name" placeholder="Nama kamu" value="' + esc(profile.name) + '"></label>' +
-      '<div class="pair"><button type="button" class="btn" id="photoBtn">' + (profile.photo ? 'Ganti foto' : 'Pilih foto') + '</button><button type="button" class="btn" id="photoDel"' + (profile.photo ? '' : ' disabled') + '>Hapus foto</button></div>' +
-      '<input type="file" id="photoFile" accept="image/*" hidden>' +
-      '<p class="err" id="profErr" role="alert" hidden></p>' +
-      '<button type="submit" class="btn primary">Simpan profil</button></form>' +
-      '<p class="hint-line" style="margin:0">Kamu mengelola ' + owners.length + ' owner dan ' + stores + ' toko.</p></section>' +
-      '<form class="card" id="pwForm" novalidate><h3>Kata sandi</h3><p class="hint-line" style="margin:0">Buat kata sandi supaya bisa masuk tanpa menunggu email.</p><label class="lbl-f" for="newPw">Kata sandi baru<input class="input" id="newPw" type="password" autocomplete="new-password" placeholder="Minimal 8 karakter"></label><p class="err" id="pwErr" role="alert" hidden></p><button type="submit" class="btn primary">Simpan kata sandi</button></form>' +
-      '<button type="button" class="btn" id="logoutBtn">Keluar</button>';
+      '<section class="card prof-card">' +
+        '<div class="prof-head"><span class="avatar xl" id="profAv" style="--c:var(--accent)" aria-hidden="true">' + meAvatar() + '</span>' +
+        '<h2 class="prof-name" id="profTitle">' + esc(profile.name || 'Belum ada nama') + '</h2>' +
+        '<div class="prof-mail">' + esc(adminEmail) + '</div>' +
+        '<div class="prof-photo"><button type="button" class="chip-btn" id="photoBtn">' + (profile.photo ? 'Ganti foto' : 'Pilih foto') + '</button><button type="button" class="chip-btn" id="photoDel"' + (profile.photo ? '' : ' disabled') + '>Hapus foto</button></div></div>' +
+        '<div class="prof-stats"><div><b>' + owners.length + '</b><span>Owner</span></div><div><b>' + stores + '</b><span>Toko</span></div></div>' +
+        '<form id="profForm" novalidate style="display:flex;flex-direction:column;gap:14px">' +
+        '<label class="lbl-f" for="profName">Nama tampilan<input class="input" id="profName" maxlength="60" autocomplete="name" placeholder="Nama kamu" value="' + esc(profile.name) + '"></label>' +
+        '<input type="file" id="photoFile" accept="image/*" hidden>' +
+        '<p class="err" id="profErr" role="alert" hidden></p>' +
+        '<button type="submit" class="btn primary">Simpan profil</button></form>' +
+      '</section>' +
+      '<form class="card" id="pwForm" novalidate><div><h3>Kata sandi</h3><p class="hint-line" style="margin:4px 0 0">Buat kata sandi supaya bisa masuk tanpa menunggu email.</p></div>' +
+        '<label class="lbl-f" for="newPw">Kata sandi baru<span class="pw"><input class="input" id="newPw" type="password" autocomplete="new-password" placeholder="Minimal 8 karakter"><button type="button" data-pwt="newPw" aria-label="Tampilkan kata sandi">Lihat</button></span></label>' +
+        '<p class="err" id="pwErr" role="alert" hidden></p><button type="submit" class="btn">Simpan kata sandi</button></form>' +
+      '<button type="button" class="btn danger" id="logoutBtn">Keluar</button>';
   }
   function renderSubscriptions() {
     var planCards = plans.map(function (p) {
@@ -1161,6 +1184,8 @@ button.avatar { border: 0; padding: 0; cursor: pointer; }
   document.addEventListener('click', function (e) {
     var lb = e.target.closest('#logoutBtn'); if (lb) { setBusy(lb, true); sb.auth.signOut(); }
     if (e.target.closest('#photoBtn')) $('#photoFile').click();
+    var pwt = e.target.closest('[data-pwt]');
+    if (pwt) { var pi = $('#' + pwt.dataset.pwt), sh = pi.type === 'password'; pi.type = sh ? 'text' : 'password'; pwt.textContent = sh ? 'Sembunyi' : 'Lihat'; return; }
     if (e.target.closest('#photoDel')) { pendingPhoto = null; $('#profAv').innerHTML = esc(initials($('#profName').value || adminEmail.split('@')[0])); $('#photoDel').disabled = true; toast('Foto akan dihapus, tekan Simpan profil'); }
   });
   document.addEventListener('submit', async function (e) {
