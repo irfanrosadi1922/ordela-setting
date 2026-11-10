@@ -338,6 +338,23 @@ body { margin: 0; }
 .plan-business { --plan-accent:var(--violet); }
 .plan-enterprise { --plan-accent:var(--ok); }
 .plan-card-head { display:flex; justify-content:space-between; align-items:flex-start; gap:10px; }
+.plan-admin-tools { display:flex; align-items:center; gap:7px; flex-wrap:wrap; }
+.plan-admin-tools button { min-height:32px; padding:0 11px; border:1px solid var(--line); border-radius:11px; background:var(--surface-2); color:var(--fg); font:inherit; font-size:11px; font-weight:750; cursor:pointer; }
+.plan-admin-tools .inactive { color:var(--warn); }
+.plan-editor { display:flex; flex-direction:column; gap:15px; }
+.plan-editor-section { display:flex; flex-direction:column; gap:10px; padding:14px; border:1px solid var(--line); border-radius:18px; background:var(--surface); }
+.plan-editor-section h3 { margin:0; font-size:14px; }
+.plan-editor-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px; }
+.plan-editor .lbl-f { min-width:0; }
+.plan-editor .wide { grid-column:1/-1; }
+.plan-feature-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px; }
+.plan-feature-toggle { display:flex; align-items:center; gap:8px; min-width:0; padding:9px 10px; border-radius:12px; background:var(--surface-2); font-size:12px; }
+.plan-feature-toggle input { accent-color:var(--accent); width:16px; height:16px; flex:none; }
+.plan-editor-note { margin:0; color:var(--muted); font-size:11.5px; line-height:1.45; }
+.plan-editor-actions { display:flex; gap:9px; }
+.plan-editor-actions > * { flex:1; }
+.plan-editor .danger { background:color-mix(in srgb,var(--crit) 10%,var(--surface)); color:var(--crit); border:1px solid color-mix(in srgb,var(--crit) 25%,var(--line)); }
+@media(max-width:420px) { .plan-editor-grid,.plan-feature-grid { grid-template-columns:1fr; } }
 .plan-eyebrow { color:var(--plan-accent); font-size:10px; font-weight:800; letter-spacing:.06em; text-transform:uppercase; }
 .plan-pick-set { min-width:0; margin:0; padding:0; border:0; }
 .plan-pick-set legend { padding:0; margin-bottom:8px; font-size:13px; font-weight:700; }
@@ -870,12 +887,50 @@ button.avatar { border: 0; padding: 0; cursor: pointer; }
     var features = enabled.map(function (k) { return '<li><span class="plan-check" aria-hidden="true">✓</span><span>' + FEATURE_NAMES[k] + '</span></li>'; }).join('');
     var lim = p.limits || {};
     function limit(v, zeroNone) { return v === -1 ? 'Tanpa batas' : (v == null ? '—' : (zeroNone && Number(v) === 0 ? 'Tidak ada' : Number(v).toLocaleString('id-ID'))); }
-    return '<p class="plan-desc">' + esc(PLAN_DESC[p.code] || p.description || 'Paket layanan Ordela.') + '</p>' +
+    return '<p class="plan-desc">' + esc(p.description || PLAN_DESC[p.code] || 'Paket layanan Ordela.') + '</p>' +
       '<div class="plan-limits"><div><b>' + limit(lim.staff) + '</b><span>Staf</span></div><div><b>' + limit(lim.outlets) + '</b><span>Outlet</span></div><div><b>' + limit(lim.daily_orders) + '</b><span>Pesanan / hari</span></div><div><b>' + limit(lim.ai_messages_month, true) + '</b><span>Pesan AI / bln</span></div></div>' +
       '<div class="plan-feature-head">Fitur tersedia <span>' + enabled.length + '</span></div>' +
       '<ul class="plan-features">' + (features || '<li class="plan-none">Fitur belum ditentukan</li>') + '</ul>';
   }
-  function pickablePlans() { return plans.filter(function (p) { return p.code !== 'legacy'; }); }
+  function planEditorHTML(p) {
+    var creating = !p, plan = p || { code:'', name:'', description:'', features:{}, limits:{staff:2,outlets:1,daily_orders:20,monthly_orders:500,ai_messages_month:0}, sort_order:plans.length + 1, is_active:true, prices:[] };
+    var prices = plan.prices || [];
+    function price(interval) { var x = prices.find(function (v) { return v.interval === interval && v.is_active; }); return x ? (Number(x.amount_minor) / 100).toFixed(2) : ''; }
+    var currency = (prices[0] && prices[0].currency || 'USD').trim();
+    var featureHTML = Object.keys(FEATURE_NAMES).map(function (k) {
+      return '<label class="plan-feature-toggle"><input type="checkbox" data-feature="' + esc(k) + '"' + (plan.features && plan.features[k] ? ' checked' : '') + '><span>' + esc(FEATURE_NAMES[k]) + '</span></label>';
+    }).join('');
+    var limits = [['staff','Jumlah staf'],['outlets','Jumlah outlet'],['daily_orders','Pesanan per hari'],['monthly_orders','Pesanan per bulan'],['ai_messages_month','Pesan AI per bulan']];
+    return '<div class="sheet-top"><div class="txt"><h2 id="sheetTitle">' + (creating ? 'Tambah paket' : 'Edit paket') + '</h2><div class="em">Kelola detail paket langganan Ordela</div></div><button type="button" class="icon-btn" data-act="close" aria-label="Tutup"><svg class="i" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></svg></button></div>' +
+      '<form id="planForm" class="plan-editor" data-mode="' + (creating ? 'create' : 'update') + '">' +
+      '<section class="plan-editor-section"><h3>Informasi paket</h3><div class="plan-editor-grid">' +
+      '<label class="lbl-f" for="planCode">Kode paket<input class="input" id="planCode" maxlength="32" pattern="[a-z][a-z0-9_-]{1,31}" value="' + esc(plan.code) + '"' + (creating ? '' : ' readonly') + ' placeholder="contoh: premium" required></label>' +
+      '<label class="lbl-f" for="planName">Nama paket<input class="input" id="planName" maxlength="60" value="' + esc(plan.name) + '" placeholder="Nama paket" required></label>' +
+      '<label class="lbl-f wide" for="planDescription">Deskripsi<textarea class="input" id="planDescription" rows="2" maxlength="240" placeholder="Deskripsi singkat paket">' + esc(plan.description || '') + '</textarea></label>' +
+      '<label class="lbl-f" for="planOrder">Urutan tampil<input class="input" id="planOrder" type="number" min="0" max="9999" step="1" value="' + Number(plan.sort_order || 0) + '"></label>' +
+      '<label class="plan-feature-toggle" style="align-self:end"><input id="planActive" type="checkbox"' + (plan.is_active !== false ? ' checked' : '') + '><span>Paket aktif dan bisa dipilih</span></label>' +
+      '</div></section>' +
+      '<section class="plan-editor-section"><h3>Batas penggunaan</h3><div class="plan-editor-grid">' + limits.map(function (x) {
+        var v = plan.limits && plan.limits[x[0]] != null ? plan.limits[x[0]] : 0;
+        return '<label class="lbl-f" for="lim_' + x[0] + '">' + x[1] + '<input class="input" id="lim_' + x[0] + '" data-limit="' + x[0] + '" type="number" min="-1" step="1" value="' + Number(v) + '"></label>';
+      }).join('') + '</div><p class="plan-editor-note">Gunakan -1 untuk tanpa batas. Nilai 0 berarti fitur/kuota tidak tersedia.</p></section>' +
+      '<section class="plan-editor-section"><h3>Fitur paket</h3><div class="plan-feature-grid">' + featureHTML + '</div></section>' +
+      '<section class="plan-editor-section"><h3>Harga langganan</h3><label class="lbl-f" for="planCurrency">Mata uang<input class="input" id="planCurrency" maxlength="3" autocapitalize="characters" value="' + esc(currency) + '" placeholder="USD"></label><div class="plan-editor-grid">' +
+      '<label class="lbl-f" for="priceMonthly">Harga bulanan<input class="input" id="priceMonthly" type="number" min="0" step="0.01" value="' + price('monthly') + '" placeholder="Kosongkan untuk nonaktif"></label>' +
+      '<label class="lbl-f" for="priceYearly">Harga tahunan<input class="input" id="priceYearly" type="number" min="0" step="0.01" value="' + price('yearly') + '" placeholder="Kosongkan untuk nonaktif"></label>' +
+      '</div><p class="plan-editor-note">Kosongkan harga jika periode tersebut tidak ditawarkan. Harga tersimpan ke tabel billing.prices yang sudah ada.</p></section>' +
+      '<p class="err" id="planErr" role="alert" hidden></p><div class="plan-editor-actions">' +
+      (!creating && !['free','legacy'].includes(plan.code) ? '<button type="button" class="btn danger" data-plan-delete="' + esc(plan.code) + '">Hapus paket</button>' : '') +
+      '<button type="submit" class="btn primary" id="planSaveBtn">' + (creating ? 'Tambah paket' : 'Simpan perubahan') + '</button></div>' +
+      '</form>';
+  }
+  function openPlanEditor(code) {
+    var p = code ? plans.find(function (x) { return x.code === code; }) : null;
+    if (code && !p) { toast('Paket tidak ditemukan. Muat ulang halaman.'); return; }
+    openId = null; sheetKind = 'plan'; openSheet(planEditorHTML(p));
+    setTimeout(function () { var x = $('#planName'); if (x) x.focus(); }, 30);
+  }
+  function pickablePlans() { return plans.filter(function (p) { return p.code !== 'legacy' && p.is_active !== false; }); }
   function openCreateOwner() {
     openId = null;
     openSheet(
@@ -923,6 +978,22 @@ button.avatar { border: 0; padding: 0; cursor: pointer; }
   document.addEventListener('click', function (e) {
     var t = e.target;
     if (t.closest('button')) buzz();
+    var planEdit = t.closest('[data-plan-edit]');
+    if (planEdit) { openPlanEditor(planEdit.dataset.planEdit); return; }
+    if (t.closest('#addPlanBtn')) { openPlanEditor(null); return; }
+    var planDelete = t.closest('[data-plan-delete]');
+    if (planDelete) {
+      var codeToDelete = planDelete.dataset.planDelete;
+      var planToDelete = plans.find(function (x) { return x.code === codeToDelete; });
+      if (!planToDelete || busy) return;
+      if (!window.confirm('Hapus paket ' + planToDelete.name + '? Paket yang masih dipakai tidak dapat dihapus.')) return;
+      setBusy(planDelete, true); busy = true;
+      api('delete_plan', { code: codeToDelete }).then(function () {
+        closeSheet(); return load().then(function () { showTab('subscriptions'); toast('Paket ' + planToDelete.name + ' dihapus'); });
+      }).catch(function (er) { toast('Gagal menghapus: ' + er.message); setBusy(planDelete, false); })
+        .finally(function () { busy = false; });
+      return;
+    }
     if (t.closest('#meAv')) { showTab('profile'); return; }
     if (t.closest('#addOwnerBtn')) { openCreateOwner(); return; }
     var row = t.closest('.row'); if (row) { openDetail(row.dataset.id); return; }
@@ -973,6 +1044,39 @@ button.avatar { border: 0; padding: 0; cursor: pointer; }
     }
   });
   document.addEventListener('submit', async function (e) {
+    if (e.target.id === 'planForm') {
+      e.preventDefault();
+      if (busy) return;
+      var form = e.target, errBox = $('#planErr'), saveBtn = $('#planSaveBtn');
+      errBox.hidden = true;
+      var code = $('#planCode').value.trim().toLowerCase();
+      var name = $('#planName').value.trim().replace(/\\s+/g, ' ');
+      var currency = $('#planCurrency').value.trim().toUpperCase();
+      if (!/^[a-z][a-z0-9_-]{1,31}$/.test(code)) { errBox.textContent = 'Kode paket 2-32 karakter, diawali huruf kecil, tanpa spasi.'; errBox.hidden = false; return; }
+      if (name.length < 2 || name.length > 60) { errBox.textContent = 'Nama paket harus 2-60 karakter.'; errBox.hidden = false; return; }
+      if (!/^[A-Z]{3}$/.test(currency)) { errBox.textContent = 'Mata uang harus 3 huruf, misalnya USD atau MYR.'; errBox.hidden = false; return; }
+      var features = {};
+      form.querySelectorAll('[data-feature]').forEach(function (x) { features[x.dataset.feature] = x.checked; });
+      var limits = {};
+      form.querySelectorAll('[data-limit]').forEach(function (x) { limits[x.dataset.limit] = Number(x.value); });
+      if (Object.keys(limits).some(function (k) { return !Number.isInteger(limits[k]) || limits[k] < -1; })) { errBox.textContent = 'Batas penggunaan harus angka bulat minimal -1.'; errBox.hidden = false; return; }
+      function minor(id) { var v = $(id).value.trim(); if (!v) return null; var n = Number(v); return Number.isFinite(n) && n >= 0 ? Math.round(n * 100) : NaN; }
+      var monthly = minor('#priceMonthly'), yearly = minor('#priceYearly');
+      if (Number.isNaN(monthly) || Number.isNaN(yearly)) { errBox.textContent = 'Harga harus berupa angka nol atau lebih.'; errBox.hidden = false; return; }
+      var payload = { code:code, name:name, description:$('#planDescription').value.trim(), features:features, limits:limits, sort_order:Number($('#planOrder').value || 0), is_active:$('#planActive').checked, currency:currency, prices:[{interval:'monthly',amount_minor:monthly},{interval:'yearly',amount_minor:yearly}] };
+      busy = true; setBusy(saveBtn, true); saveBtn.textContent = 'Menyimpan...';
+      try {
+        await api(form.dataset.mode === 'create' ? 'create_plan' : 'update_plan', payload);
+        closeSheet(); await load(); showTab('subscriptions');
+        toast(form.dataset.mode === 'create' ? 'Paket ' + name + ' berhasil ditambahkan' : 'Paket ' + name + ' berhasil diperbarui');
+      } catch (er) {
+        errBox.textContent = er.message || 'Gagal menyimpan paket.'; errBox.hidden = false;
+      } finally {
+        busy = false;
+        if (saveBtn.isConnected) { setBusy(saveBtn, false); saveBtn.textContent = form.dataset.mode === 'create' ? 'Tambah paket' : 'Simpan perubahan'; }
+      }
+      return;
+    }
     if (e.target.id !== 'createOwnerForm') return;
     e.preventDefault();
     if (busy) return;
@@ -1106,9 +1210,12 @@ button.avatar { border: 0; padding: 0; cursor: pointer; }
     var planCards = plans.map(function (p) {
       var meta = PLAN_META[p.code] || {tag:'Paket Ordela',tone:''};
       var used = count(function (o) { return !!o.store_id && o.plan_code === p.code; });
+      var priceText = (p.prices || []).filter(function (x) { return x.is_active; }).map(function (x) { return esc(x.display_amount || money(x.amount_minor, x.currency)); }).join(' · ');
       return '<article class="plan-card plan-' + esc(meta.tone) + '">' +
         '<div class="plan-card-head"><div><span class="plan-eyebrow">' + esc(meta.tag) + '</span><h3>' + esc(p.name) + '</h3></div><span class="plan-count">' + used + ' toko</span></div>' +
+        (priceText ? '<p class="plan-desc"><b>' + priceText + '</b></p>' : '') +
         planBody(p) +
+        '<div class="plan-admin-tools"><span class="' + (p.is_active ? 'plan-count' : 'plan-count inactive') + '">' + (p.is_active ? 'Aktif' : 'Nonaktif') + '</span><button type="button" data-plan-edit="' + esc(p.code) + '">Edit paket</button></div>' +
       '</article>';
     }).join('');
     var subs = owners.slice().sort(function(a,b){ return String(a.owner_name).localeCompare(String(b.owner_name),'id'); });
@@ -1125,7 +1232,7 @@ button.avatar { border: 0; padding: 0; cursor: pointer; }
     $('#view-subscriptions').innerHTML =
       '<section class="subscription-intro"><div class="subscription-intro-copy"><span class="section-kicker">ORD​ELA MEMBERSHIP</span><h2>Paket yang sesuai untuk setiap tahap bisnis</h2><p>Kelola paket, fitur, dan masa aktif langganan owner dari satu tempat.</p><div class="trial-note"><span class="trial-icon">14</span><span><b>Trial Pro gratis 14 hari</b><small>Satu kali per Owner, otomatis dimulai saat toko pertama dibuat.</small></span></div></div><div class="intro-art" aria-hidden="true"><svg viewBox="0 0 120 120"><rect x="14" y="22" width="92" height="72" rx="18"/><path d="M14 45h92M35 66h18M35 78h42"/><circle cx="88" cy="66" r="8"/></svg></div></section>' +
       '<section class="subscription-overview"><div class="subscription-metric"><span class="metric-icon">' + ICON.card + '</span><span><b>' + plans.length + '</b><small>Paket tersedia</small></span></div><div class="subscription-metric"><span class="metric-icon trial-metric">14</span><span><b>' + trialCount + '</b><small>Dalam masa trial</small></span></div><div class="subscription-metric"><span class="metric-icon active-metric">✓</span><span><b>' + activeCount + '</b><small>Langganan aktif</small></span></div><div class="subscription-metric"><span class="metric-icon expired-metric">!</span><span><b>' + expiredCount + '</b><small>Kedaluwarsa</small></span></div></section>' +
-      '<section class="plans-section"><div class="section-heading"><div><span class="section-kicker">PILIHAN PAKET</span><h2>Paket Ordela</h2><p>Fitur dan batas penggunaan setiap paket.</p></div></div><div class="plans-grid">' + (planCards || '<div class="empty">Belum ada paket aktif.</div>') + '</div></section>' +
+      '<section class="plans-section"><div class="section-heading"><div><span class="section-kicker">PILIHAN PAKET</span><h2>Paket Ordela</h2><p>Tambah, edit, atau hapus paket yang tersedia.</p></div><button type="button" class="btn primary" id="addPlanBtn">+ Tambah paket</button></div><div class="plans-grid">' + (planCards || '<div class="empty">Belum ada paket aktif.</div>') + '</div></section>' +
       '<section class="subscriptions-section"><div class="section-heading"><div><span class="section-kicker">MONITORING</span><h2>Langganan owner</h2><p>Pantau paket dan status langganan setiap toko.</p></div><span class="subscription-total">' + owners.length + ' owner</span></div><div class="subscription-table-head"><span>OWNER / TOKO</span><span>PAKET &amp; STATUS</span><span>MASA AKTIF</span></div><ul class="subscription-list">' + (rows || '<li class="empty"><b>Belum ada langganan</b>Data langganan owner akan muncul di sini.</li>') + '</ul></section>';
   }
   var TITLES = { home: 'Owner', analytics: 'Analitik owner', subscriptions: 'Langganan', profile: 'Profil' };
