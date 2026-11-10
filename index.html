@@ -189,7 +189,7 @@ ul.users { list-style: none; margin: 0; padding: 0; display: flex; flex-directio
   padding: 28px max(16px, env(safe-area-inset-left, 0px)) calc(10px + env(safe-area-inset-bottom, 0px));
   padding-right: max(16px, env(safe-area-inset-right, 0px));
   background: linear-gradient(to bottom, transparent, var(--bg) 46%); }
-.nav { pointer-events: auto; width: 100%; max-width: 960px; margin: 0 auto; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 4px;
+.nav { pointer-events: auto; width: 100%; max-width: 960px; margin: 0 auto; display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 4px;
   background: color-mix(in srgb, var(--surface) 76%, transparent); border: 1px solid color-mix(in srgb, var(--line) 72%, transparent); border-radius: 30px; padding: 6px;
   -webkit-backdrop-filter: blur(18px) saturate(145%); backdrop-filter: blur(18px) saturate(145%); box-shadow: 0 8px 28px rgba(0,0,0,.12); }
 .nav button { border: 0; background: transparent; color: var(--muted); display: flex; flex-direction: column; align-items: center; gap: 2px;
@@ -495,6 +495,25 @@ button.avatar { border: 0; padding: 0; cursor: pointer; }
 .prof-stat small { display: none; }
 .prof-edit { margin-left: auto; height: 46px; padding: 0 22px; border: 0; border-radius: 99px; background: #fff; color: #15161a; font-weight: 700; font-size: 15px; display: inline-flex; align-items: center; gap: 8px; box-shadow: 0 6px 20px rgba(0, 0, 0, .28); }
 .prof-edit svg { width: 18px; height: 18px; }
+
+.ai-status { display:flex; align-items:center; gap:8px; color:var(--ok); font-size:13px; font-weight:700; }
+.ai-status::before { content:""; width:8px; height:8px; border-radius:50%; background:currentColor; }
+.ai-grid { display:grid; grid-template-columns:minmax(0,1fr); gap:12px; }
+@media (min-width:760px) { .ai-grid { grid-template-columns:repeat(2,minmax(0,1fr)); } }
+.ai-card-head { display:flex; align-items:flex-start; justify-content:space-between; gap:12px; }
+.ai-card-head h2 { margin:0; font-size:20px; font-weight:800; }
+.ai-card-head p { margin:4px 0 0; color:var(--muted); font-size:13px; }
+.ai-form { display:flex; flex-direction:column; gap:14px; }
+.ai-form textarea { height:auto; min-height:84px; padding:12px 14px; resize:vertical; line-height:1.45; }
+.ai-key-note,.ai-help { color:var(--muted); font-size:12.5px; margin:-7px 0 0; }
+.ai-actions { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+.ai-result { background:var(--surface-2); border-radius:16px; padding:12px 14px; font-size:13px; white-space:pre-wrap; overflow-wrap:anywhere; }
+.ai-result.ok { color:var(--ok); }
+.ai-result.bad { color:var(--crit); }
+.ai-active { display:flex; flex-direction:column; gap:5px; padding:14px 16px; border-radius:18px; background:var(--surface-2); }
+.ai-active strong { font-size:16px; }
+.ai-active span { color:var(--muted); font-size:13px; overflow-wrap:anywhere; }
+
 </style>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
 </head>
@@ -582,6 +601,7 @@ button.avatar { border: 0; padding: 0; cursor: pointer; }
   </div>
 
   <div class="view" id="view-analytics" hidden></div>
+  <div class="view" id="view-ai" hidden></div>
   <div class="view" id="view-subscriptions" hidden></div>
   <div class="view" id="view-profile" hidden></div>
 </div>
@@ -591,6 +611,7 @@ button.avatar { border: 0; padding: 0; cursor: pointer; }
     <button type="button" data-tab="home" aria-current="page"><svg class="i" viewBox="0 0 24 24"><path d="M4 11 12 4l8 7v8a1 1 0 0 1-1 1h-4v-6H9v6H5a1 1 0 0 1-1-1z"/></svg><span>Beranda</span></button>
     <button type="button" data-tab="analytics"><svg class="i" viewBox="0 0 24 24"><path d="M12 3a9 9 0 1 0 9 9h-9z"/><path d="M15 3.5A9 9 0 0 1 20.5 9H15z"/></svg><span>Analitik</span></button>
     <button type="button" data-tab="subscriptions"><svg class="i" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="3"/><path d="M3 10h18M7 15h4"/></svg><span>Langganan</span></button>
+    <button type="button" data-tab="ai"><svg class="i" viewBox="0 0 24 24"><path d="M12 3v2M12 19v2M3 12h2M19 12h2M5.6 5.6 7 7M17 17l1.4 1.4M18.4 5.6 17 7M7 17l-1.4 1.4"/><circle cx="12" cy="12" r="5"/></svg><span>AI</span></button>
     <button type="button" data-tab="profile"><svg class="i" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21c.8-4 4-6 8-6s7.2 2 8 6"/></svg><span>Profil</span></button>
   </nav>
 </div>
@@ -1152,6 +1173,116 @@ button.avatar { border: 0; padding: 0; cursor: pointer; }
       st.filter(function (s) { return s[1] > 0; }).map(function (s) { return '<i style="flex:' + s[1] + ';background:var(' + s[2] + ')"></i>'; }).join('') + '</div>' +
       '<ul class="legend">' + st.map(function (s) { return '<li><i style="background:var(' + s[2] + ')"></i>' + s[0] + ' <b class="num">' + s[1] + '</b></li>'; }).join('') + '</ul></section>';
   }
+
+  /* AI Manager — konfigurasi global, hanya melalui owner-admin yang memverifikasi admin. */
+  var aiSettings = null;
+  var AI_PRESETS = {
+    OpenAI: { base_url: 'https://api.openai.com/v1', model: 'gpt-4o-mini' },
+    DeepSeek: { base_url: 'https://api.deepseek.com/v1', model: 'deepseek-chat' },
+    Groq: { base_url: 'https://api.groq.com/openai/v1', model: 'llama-3.3-70b-versatile' },
+    Gemini: { base_url: 'https://generativelanguage.googleapis.com/v1beta/openai', model: 'gemini-2.0-flash' },
+    OpenRouter: { base_url: 'https://openrouter.ai/api/v1', model: 'openai/gpt-4o-mini' },
+    'Grok (xAI)': { base_url: 'https://api.x.ai/v1', model: 'grok-4' },
+    Custom: { base_url: '', model: '' }
+  };
+  function renderAiSettings(data) {
+    aiSettings = data;
+    var c = data.config || {};
+    var providerOptions = Object.keys(AI_PRESETS).map(function (p) { return '<option value="' + esc(p) + '"' + (c.provider === p ? ' selected' : '') + '>' + esc(p) + '</option>'; }).join('');
+    $('#view-ai').innerHTML =
+      '<section class="card"><div class="ai-card-head"><div><span class="section-kicker">AI MANAGER ORDELA</span><h2>Pengaturan mesin AI</h2><p>Ganti provider dan model untuk asisten AI seluruh toko.</p></div><span class="ai-status">Global</span></div>' +
+      '<div class="ai-active"><small class="hint-line">MESIN AI SAAT INI</small><strong>' + esc(c.provider || 'Belum dipilih') + ' · ' + esc(c.model || '-') + '</strong><span>' + esc(c.base_url || '-') + '</span><span>API Key: ' + (data.has_api_key ? '•••••••• tersimpan' : 'belum diatur') + (data.updated_at ? ' · Diperbarui ' + esc(dateTxt(data.updated_at)) : '') + '</span></div></section>' +
+      '<form class="card ai-form" id="aiSettingsForm" novalidate>' +
+        '<div><h3>Provider dan model</h3><p class="sub">Pilih preset, lalu sesuaikan model sesuai akun provider.</p></div>' +
+        '<label class="lbl-f" for="aiProvider">AI Engine<select class="select" id="aiProvider">' + providerOptions + '</select></label>' +
+        '<div class="ai-grid">' +
+          '<label class="lbl-f" for="aiBaseUrl">Base URL<input class="input" id="aiBaseUrl" type="url" maxlength="300" required value="' + esc(c.base_url || '') + '" placeholder="https://api.provider.com/v1"></label>' +
+          '<label class="lbl-f" for="aiModel">Model ID<input class="input" id="aiModel" maxlength="160" required value="' + esc(c.model || '') + '" placeholder="Masukkan model ID"></label>' +
+        '</div>' +
+        '<label class="lbl-f" for="aiApiKey">API Key<input class="input" id="aiApiKey" type="password" maxlength="500" autocomplete="new-password" placeholder="' + (data.has_api_key ? 'Kosongkan untuk tetap memakai key tersimpan' : 'Tempel API Key provider') + '"></label>' +
+        '<p class="ai-key-note">API Key tidak pernah ditampilkan kembali. Key baru dienkripsi di server dan tidak disimpan di browser.</p>' +
+        '<div class="ai-grid">' +
+          '<label class="lbl-f" for="aiTemperature">Temperature (0–2)<input class="input" id="aiTemperature" type="number" min="0" max="2" step="0.05" value="' + esc(c.temperature == null ? 0.25 : c.temperature) + '"></label>' +
+          '<label class="lbl-f" for="aiMaxTokens">Max Tokens (100–8000)<input class="input" id="aiMaxTokens" type="number" min="100" max="8000" step="100" value="' + esc(c.max_tokens == null ? 800 : c.max_tokens) + '"></label>' +
+        '</div>' +
+        '<details><summary style="cursor:pointer;font-weight:700">Pengaturan lanjutan AI</summary><div class="form-stack" style="margin-top:12px">' +
+          '<label class="lbl-f" for="aiSystemPrompt">System Prompt<textarea class="input" id="aiSystemPrompt" maxlength="12000">' + esc(c.system_prompt || '') + '</textarea></label>' +
+          '<label class="lbl-f" for="aiPersonality">Kepribadian AI<textarea class="input" id="aiPersonality" maxlength="3000">' + esc(c.personality || '') + '</textarea></label>' +
+          '<label class="lbl-f" for="aiKnowledge">Pengetahuan tambahan<textarea class="input" id="aiKnowledge" maxlength="12000">' + esc(c.knowledge || '') + '</textarea></label>' +
+        '</div></details>' +
+        '<p class="ai-help">Setiap perubahan harus lolos Uji AI. Menyimpan konfigurasi akan mengubah provider yang dipakai permintaan AI berikutnya.</p>' +
+        '<div id="aiTestResult" class="ai-result" hidden role="status" aria-live="polite"></div>' +
+        '<div class="ai-actions"><button type="button" class="btn" id="aiTestBtn">🧪 Uji AI</button><button type="submit" class="btn primary" id="aiSaveBtn" disabled>Simpan konfigurasi</button></div>' +
+      '</form>';
+  }
+  async function loadAiSettings() {
+    $('#view-ai').innerHTML = '<section class="card"><h3>Memuat pengaturan AI...</h3><p class="hint-line">Mengambil konfigurasi aktif dari server.</p></section>';
+    try { renderAiSettings(await api('get_ai_config')); }
+    catch (e) {
+      $('#view-ai').innerHTML = '<section class="card"><h3>Pengaturan AI belum dapat dimuat</h3><p class="err">' + esc(e.message) + '</p><button type="button" class="btn primary" id="aiReloadBtn">Coba lagi</button></section>';
+    }
+  }
+  function readAiForm() {
+    return {
+      config: {
+        provider: $('#aiProvider').value,
+        base_url: $('#aiBaseUrl').value.trim(),
+        model: $('#aiModel').value.trim(),
+        temperature: Number($('#aiTemperature').value),
+        max_tokens: Number($('#aiMaxTokens').value),
+        system_prompt: $('#aiSystemPrompt').value,
+        personality: $('#aiPersonality').value,
+        knowledge: $('#aiKnowledge').value
+      },
+      api_key: $('#aiApiKey').value.trim()
+    };
+  }
+  function resetAiTest() {
+    var f = $('#aiSettingsForm'); if (!f) return;
+    f.dataset.tested = '0'; $('#aiSaveBtn').disabled = true;
+    var box = $('#aiTestResult'); box.hidden = true; box.className = 'ai-result'; box.textContent = '';
+  }
+  document.addEventListener('input', function (e) { if (e.target.closest && e.target.closest('#aiSettingsForm')) resetAiTest(); });
+  document.addEventListener('change', function (e) {
+    if (e.target.id === 'aiProvider') {
+      var p = AI_PRESETS[e.target.value] || AI_PRESETS.Custom;
+      $('#aiBaseUrl').value = p.base_url; $('#aiModel').value = p.model; resetAiTest();
+    }
+  });
+  document.addEventListener('click', async function (e) {
+    if (e.target.closest('#aiReloadBtn')) { loadAiSettings(); return; }
+    var test = e.target.closest('#aiTestBtn');
+    if (test) {
+      var f = $('#aiSettingsForm'), box = $('#aiTestResult'), payload = readAiForm();
+      box.hidden = false; box.className = 'ai-result'; box.textContent = 'Menghubungi provider dan menguji model...';
+      setBusy(test, true);
+      try {
+        var result = await api('test_ai_config', payload);
+        f.dataset.tested = '1'; $('#aiSaveBtn').disabled = false;
+        box.className = 'ai-result ok'; box.textContent = '✓ Uji berhasil · ' + result.provider + ' / ' + result.model + '\n' + result.answer;
+      } catch (er) {
+        f.dataset.tested = '0'; $('#aiSaveBtn').disabled = true;
+        box.className = 'ai-result bad'; box.textContent = 'Uji gagal: ' + (er.message || 'Provider tidak merespons.');
+      } finally { setBusy(test, false); }
+      return;
+    }
+  });
+  document.addEventListener('submit', async function (e) {
+    if (e.target.id !== 'aiSettingsForm') return;
+    e.preventDefault();
+    var f = e.target, btn = $('#aiSaveBtn'), payload = readAiForm(), box = $('#aiTestResult');
+    if (f.dataset.tested !== '1') { box.hidden = false; box.className = 'ai-result bad'; box.textContent = 'Jalankan Uji AI sampai berhasil sebelum menyimpan.'; return; }
+    setBusy(btn, true); btn.textContent = 'Menyimpan...';
+    try {
+      var result = await api('save_ai_config', payload);
+      $('#aiApiKey').value = '';
+      toast('Pengaturan AI berhasil disimpan');
+      await loadAiSettings();
+    } catch (er) {
+      box.hidden = false; box.className = 'ai-result bad'; box.textContent = 'Gagal menyimpan: ' + (er.message || 'Kesalahan server.');
+    } finally { if (btn.isConnected) { setBusy(btn, false); btn.textContent = 'Simpan konfigurasi'; } }
+  });
+
   function resizeImage(file) {
     return new Promise(function (res, rej) {
       var img = new Image(), url = URL.createObjectURL(file);
@@ -1237,13 +1368,14 @@ button.avatar { border: 0; padding: 0; cursor: pointer; }
       '<section class="plans-section"><div class="section-heading"><div><span class="section-kicker">PILIHAN PAKET</span><h2>Paket Ordela</h2><p>Tambah, edit, atau hapus paket yang tersedia.</p></div><button type="button" class="btn primary" id="addPlanBtn" aria-label="Tambah paket" title="Tambah paket"><svg class="i database-add" viewBox="0 0 24 24" aria-hidden="true"><ellipse cx="10" cy="5" rx="7" ry="3"/><path d="M3 5v10c0 1.66 3.13 3 7 3 1.1 0 2.14-.12 3.05-.34M17 8v4M3 10c0 1.66 3.13 3 7 3M3 15c0 1.66 3.13 3 7 3M18 14v8M14 18h8"/></svg></button></div><div class="plans-grid">' + (planCards || '<div class="empty">Belum ada paket aktif.</div>') + '</div></section>' +
       '<section class="subscriptions-section"><div class="section-heading"><div><span class="section-kicker">MONITORING</span><h2>Langganan owner</h2><p>Pantau paket dan status langganan setiap toko.</p></div><span class="subscription-total">' + owners.length + ' owner</span></div><div class="subscription-table-head"><span>OWNER / TOKO</span><span>PAKET &amp; STATUS</span><span>MASA AKTIF</span></div><ul class="subscription-list">' + (rows || '<li class="empty"><b>Belum ada langganan</b>Data langganan owner akan muncul di sini.</li>') + '</ul></section>';
   }
-  var TITLES = { home: 'Owner', analytics: 'Analitik owner', subscriptions: 'Langganan', profile: 'Profil' };
+  var TITLES = { home: 'Owner', analytics: 'Analitik owner', subscriptions: 'Langganan', ai: 'Pengaturan AI', profile: 'Profil' };
   function showTab(t) {
-    ['home', 'analytics', 'subscriptions', 'profile'].forEach(function (k) { $('#view-' + k).hidden = k !== t; });
+    ['home', 'analytics', 'subscriptions', 'ai', 'profile'].forEach(function (k) { $('#view-' + k).hidden = k !== t; });
     document.querySelectorAll('.nav button').forEach(function (b) { if (b.dataset.tab === t) b.setAttribute('aria-current', 'page'); else b.removeAttribute('aria-current'); });
     $('#pageTitle').textContent = TITLES[t];
     if (t === 'analytics') renderAnalytics();
     if (t === 'subscriptions') renderSubscriptions();
+    if (t === 'ai') loadAiSettings();
     if (t === 'profile') renderProfile();
     window.scrollTo(0, 0);
   }
